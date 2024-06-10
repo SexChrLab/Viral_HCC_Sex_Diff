@@ -1,0 +1,619 @@
+---
+title: "2024_4_15_Visualize_down_sampled_DEA"
+output: html_document
+date: "2024-04-15"
+---
+
+**Purpose:** Create visualizations for DEA performed with down-sampled Male samples
+
+**Methods:**
+
+Visualize each of the following comparisons with volcano plots, upset plots, and logFC plots
+
+
+**Results:**
+
+
+## Libraries
+
+```{r}
+library(ggrepel)
+library(ggplot2)
+library(UpSetR)
+```
+
+## Read in files
+
+```{r}
+# HBV tumor tumor-adjacent
+tumor_adjacent_HBV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_HBV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_HBV <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_HBV_tumor_tumor_adj_p0.05_lfc2.csv"))
+colnames(tumor_adjacent_HBV) <- c("X", "DEGs.GENEID", "DEGs.gene_name", "DEGs.adj.P.Val", "DEGs.logFC")
+
+# HCV tumor tumor-adjacent
+tumor_adjacent_HCV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_HCV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_HCV <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_HBV_tumor_tumor_adj_p0.05_lfc2.csv"))
+colnames(tumor_adjacent_HCV) <- c("X", "DEGs.GENEID", "DEGs.gene_name", "DEGs.adj.P.Val", "DEGs.logFC")
+
+# F HBV tumor tumor-adjacent
+tumor_adjacent_F_HBV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_female_HBV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_F_HBV <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_female_HBV_tumor_tumor_adj_p0.05_lfc2.csv"))
+colnames(tumor_adjacent_F_HBV) <- colnames(tumor_adjacent_HBV)
+
+# F HCV tumor tumor-adjacent
+tumor_adjacent_F_HCV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_female_HCV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_F_HCV <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_female_HBV_tumor_tumor_adj_p0.05_lfc2.csv"))
+colnames(tumor_adjacent_F_HCV) <- colnames(tumor_adjacent_HBV)
+
+# M HBV tumor tumor-adjacent
+tumor_adjacent_M_HBV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_male_HBV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HBV <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_male_HBV_tumor_tumor_adj_p0.05_lfc2.csv"))
+colnames(tumor_adjacent_M_HBV) <- colnames(tumor_adjacent_HBV)
+
+# M HCV tumor tumor-adjacent
+tumor_adjacent_M_HCV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_male_HCV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HCV <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/downsampled_male_HCV_tumor_tumor_adj_p0.05_lfc2.csv"))
+colnames(tumor_adjacent_M_HCV) <- colnames(tumor_adjacent_HBV)
+```
+
+## Volcano plots
+
+### HBV Tumor vs. Tumor_adjacent
+
+```{r}
+# Volcano plots of sex-biased gene expression in non-infected, HBV, and HCV cases
+
+# Assigning colors to highlight genes that have an absolute fold change => 2
+# and an adjusted p-value =< 0.01
+
+# For no hepatitis
+# Finding X and Y linked and autosomal genes, assigning color values
+tumor_adjacent_HBV_uf$color <- NA
+## Autosomal non-significant
+tumor_adjacent_HBV_uf[which(!(tumor_adjacent_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_HBV_uf$chr != "chrX" & tumor_adjacent_HBV_uf$chr != "chrY"), 15] <- 1
+## X-linked non-signifiant
+tumor_adjacent_HBV_uf[which(!(tumor_adjacent_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_HBV_uf$chr == "chrX"), 15] <- 2
+## Y-linked non-significant
+tumor_adjacent_HBV_uf[which(!(tumor_adjacent_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_HBV_uf$chr == "chrY"), 15] <- 3
+## Autosomal significant
+tumor_adjacent_HBV_uf[which((tumor_adjacent_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_HBV_uf$chr != "chrX" & tumor_adjacent_HBV_uf$chr != "chrY"), 15] <- 4
+## X-linked signifiant
+tumor_adjacent_HBV_uf[which((tumor_adjacent_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_HBV_uf$chr == "chrX"), 15] <- 5
+## Y-linked significant
+tumor_adjacent_HBV_uf[which((tumor_adjacent_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_HBV_uf$chr == "chrY"), 15] <- 6
+
+
+tumor_adjacent_HBV_uf$color <- as.factor(tumor_adjacent_HBV_uf$color)
+
+# Constructing the plot object. The colors will not work the way they should if
+# one of the groups doesn't have any genes
+# "azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen"
+p <- ggplot(data = tumor_adjacent_HBV_uf, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-10, 10)) + ylim(c(0, 70)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(tumor_adjacent_HBV_uf, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_HBV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+
+### HCV Tumor vs. Tumor_adjacent
+
+```{r}
+# Volcano plots of sex-biased gene expression in non-infected, HBV, and HCV cases
+
+# Assigning colors to highlight genes that have an absolute fold change => 2
+# and an adjusted p-value =< 0.01
+
+# For no hepatitis
+# Finding X and Y linked and autosomal genes, assigning color values
+tumor_adjacent_HCV_uf$color <- NA
+## Autosomal non-significant
+tumor_adjacent_HCV_uf[which(!(tumor_adjacent_HCV_uf$GENEID %in% tumor_adjacent_HCV$DEGs.GENEID) & tumor_adjacent_HCV_uf$chr != "chrX" & tumor_adjacent_HCV_uf$chr != "chrY"), 15] <- 1
+## X-linked non-signifiant
+tumor_adjacent_HCV_uf[which(!(tumor_adjacent_HCV_uf$GENEID %in% tumor_adjacent_HCV$DEGs.GENEID) & tumor_adjacent_HCV_uf$chr == "chrX"), 15] <- 2
+## Y-linked non-significant
+tumor_adjacent_HCV_uf[which(!(tumor_adjacent_HCV_uf$GENEID %in% tumor_adjacent_HCV$DEGs.GENEID) & tumor_adjacent_HCV_uf$chr == "chrY"), 15] <- 3
+## Autosomal significant
+tumor_adjacent_HCV_uf[which((tumor_adjacent_HCV_uf$GENEID %in% tumor_adjacent_HCV$DEGs.GENEID) & tumor_adjacent_HCV_uf$chr != "chrX" & tumor_adjacent_HCV_uf$chr != "chrY"), 15] <- 4
+## X-linked signifiant
+tumor_adjacent_HCV_uf[which((tumor_adjacent_HCV_uf$GENEID %in% tumor_adjacent_HCV$DEGs.GENEID) & tumor_adjacent_HCV_uf$chr == "chrX"), 15] <- 5
+## Y-linked significant
+tumor_adjacent_HCV_uf[which((tumor_adjacent_HCV_uf$GENEID %in% tumor_adjacent_HCV$DEGs.GENEID) & tumor_adjacent_HCV_uf$chr == "chrY"), 15] <- 6
+
+
+tumor_adjacent_HCV_uf$color <- as.factor(tumor_adjacent_HCV_uf$color)
+
+# Constructing the plot object. The colors will not work the way they should if
+# one of the groups doesn't have any genes
+# "azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen"
+p <- ggplot(data = tumor_adjacent_HCV_uf, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-10, 10)) + ylim(c(0, 50)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(tumor_adjacent_HCV_uf, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_HCV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+
+# Analysis stratified by sex and etiology
+
+### Female HBV Tumor vs. Tumor_adjacent
+
+```{r}
+# Volcano plots of sex-biased gene expression in non-infected, HBV, and HCV cases
+
+# Assigning colors to highlight genes that have an absolute fold change => 2
+# and an adjusted p-value =< 0.01
+
+# For no hepatitis
+# Finding X and Y linked and autosomal genes, assigning color values
+tumor_adjacent_F_HBV_uf$color <- NA
+## Autosomal non-significant
+tumor_adjacent_F_HBV_uf[which(!(tumor_adjacent_F_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HBV_uf$chr != "chrX" & tumor_adjacent_F_HBV_uf$chr != "chrY"), 15] <- 1
+## X-linked non-signifiant
+tumor_adjacent_F_HBV_uf[which(!(tumor_adjacent_F_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HBV_uf$chr == "chrX"), 15] <- 2
+## Y-linked non-significant
+tumor_adjacent_F_HBV_uf[which(!(tumor_adjacent_F_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HBV_uf$chr == "chrY"), 15] <- 3
+## Autosomal significant
+tumor_adjacent_F_HBV_uf[which((tumor_adjacent_F_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HBV_uf$chr != "chrX" & tumor_adjacent_F_HBV_uf$chr != "chrY"), 15] <- 4
+## X-linked signifiant
+tumor_adjacent_F_HBV_uf[which((tumor_adjacent_F_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HBV_uf$chr == "chrX"), 15] <- 5
+## Y-linked significant
+tumor_adjacent_F_HBV_uf[which((tumor_adjacent_F_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HBV_uf$chr == "chrY"), 15] <- 6
+
+
+tumor_adjacent_F_HBV_uf$color <- as.factor(tumor_adjacent_F_HBV_uf$color)
+
+# Constructing the plot object. The colors will not work the way they should if
+# one of the groups doesn't have any genes
+# "azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen"
+p <- ggplot(data = tumor_adjacent_F_HBV_uf, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-8, 8)) + ylim(c(0, 30)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(tumor_adjacent_F_HBV_uf, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_F_HBV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+
+### Female HCV Tumor vs. Tumor_adjacent
+
+```{r}
+# Volcano plots of sex-biased gene expression in non-infected, HBV, and HCV cases
+
+# Assigning colors to highlight genes that have an absolute fold change => 2
+# and an adjusted p-value =< 0.01
+
+# For no hepatitis
+# Finding X and Y linked and autosomal genes, assigning color values
+tumor_adjacent_F_HCV_uf$color <- NA
+## Autosomal non-significant
+tumor_adjacent_F_HCV_uf[which(!(tumor_adjacent_F_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HCV_uf$chr != "chrX" & tumor_adjacent_F_HCV_uf$chr != "chrY"), 15] <- 1
+## X-linked non-signifiant
+tumor_adjacent_F_HCV_uf[which(!(tumor_adjacent_F_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HCV_uf$chr == "chrX"), 15] <- 2
+## Y-linked non-significant
+tumor_adjacent_F_HCV_uf[which(!(tumor_adjacent_F_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HCV_uf$chr == "chrY"), 15] <- 3
+## Autosomal significant
+tumor_adjacent_F_HCV_uf[which((tumor_adjacent_F_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HCV_uf$chr != "chrX" & tumor_adjacent_F_HCV_uf$chr != "chrY"), 15] <- 4
+## X-linked signifiant
+tumor_adjacent_F_HCV_uf[which((tumor_adjacent_F_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HCV_uf$chr == "chrX"), 15] <- 5
+## Y-linked significant
+tumor_adjacent_F_HCV_uf[which((tumor_adjacent_F_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_F_HCV_uf$chr == "chrY"), 15] <- 6
+
+
+tumor_adjacent_F_HCV_uf$color <- as.factor(tumor_adjacent_F_HCV_uf$color)
+
+# Constructing the plot object. The colors will not work the way they should if
+# one of the groups doesn't have any genes
+# "azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen"
+p <- ggplot(data = tumor_adjacent_F_HCV_uf, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-8, 8)) + ylim(c(0, 50)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(tumor_adjacent_F_HCV_uf, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_F_HCV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+
+# Analysis stratified by sex and etiology
+
+### Male HBV Tumor vs. Tumor_adjacent
+
+```{r}
+# Volcano plots of sex-biased gene expression in non-infected, HBV, and HCV cases
+
+# Assigning colors to highlight genes that have an absolute fold change => 2
+# and an adjusted p-value =< 0.01
+
+# For no hepatitis
+# Finding X and Y linked and autosomal genes, assigning color values
+tumor_adjacent_M_HBV_uf$color <- NA
+## Autosomal non-significant
+tumor_adjacent_M_HBV_uf[which(!(tumor_adjacent_M_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HBV_uf$chr != "chrX" & tumor_adjacent_M_HBV_uf$chr != "chrY"), 15] <- 1
+## X-linked non-signifiant
+tumor_adjacent_M_HBV_uf[which(!(tumor_adjacent_M_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HBV_uf$chr == "chrX"), 15] <- 2
+## Y-linked non-significant
+tumor_adjacent_M_HBV_uf[which(!(tumor_adjacent_M_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HBV_uf$chr == "chrY"), 15] <- 3
+## Autosomal significant
+tumor_adjacent_M_HBV_uf[which((tumor_adjacent_M_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HBV_uf$chr != "chrX" & tumor_adjacent_M_HBV_uf$chr != "chrY"), 15] <- 4
+## X-linked signifiant
+tumor_adjacent_M_HBV_uf[which((tumor_adjacent_M_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HBV_uf$chr == "chrX"), 15] <- 5
+## Y-linked significant
+tumor_adjacent_M_HBV_uf[which((tumor_adjacent_M_HBV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HBV_uf$chr == "chrY"), 15] <- 6
+
+
+tumor_adjacent_M_HBV_uf$color <- as.factor(tumor_adjacent_M_HBV_uf$color)
+
+# Constructing the plot object. The colors will not work the way they should if
+# one of the groups doesn't have any genes
+# "azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen"
+p <- ggplot(data = tumor_adjacent_M_HBV_uf, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-8, 8)) + ylim(c(0, 30)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(tumor_adjacent_M_HBV_uf, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_M_HBV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+
+### Male HCV Tumor vs. Tumor_adjacent
+
+```{r}
+# Volcano plots of sex-biased gene expression in non-infected, HBV, and HCV cases
+
+# Assigning colors to highlight genes that have an absolute fold change => 2
+# and an adjusted p-value =< 0.01
+
+# For no hepatitis
+# Finding X and Y linked and autosomal genes, assigning color values
+tumor_adjacent_M_HCV_uf$color <- NA
+## Autosomal non-significant
+tumor_adjacent_M_HCV_uf[which(!(tumor_adjacent_M_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HCV_uf$chr != "chrX" & tumor_adjacent_M_HCV_uf$chr != "chrY"), 15] <- 1
+## X-linked non-signifiant
+tumor_adjacent_M_HCV_uf[which(!(tumor_adjacent_M_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HCV_uf$chr == "chrX"), 15] <- 2
+## Y-linked non-significant
+tumor_adjacent_M_HCV_uf[which(!(tumor_adjacent_M_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HCV_uf$chr == "chrY"), 15] <- 3
+## Autosomal significant
+tumor_adjacent_M_HCV_uf[which((tumor_adjacent_M_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HCV_uf$chr != "chrX" & tumor_adjacent_M_HCV_uf$chr != "chrY"), 15] <- 4
+## X-linked signifiant
+tumor_adjacent_M_HCV_uf[which((tumor_adjacent_M_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HCV_uf$chr == "chrX"), 15] <- 5
+## Y-linked significant
+tumor_adjacent_M_HCV_uf[which((tumor_adjacent_M_HCV_uf$GENEID %in% tumor_adjacent_HBV$DEGs.GENEID) & tumor_adjacent_M_HCV_uf$chr == "chrY"), 15] <- 6
+
+
+tumor_adjacent_M_HCV_uf$color <- as.factor(tumor_adjacent_M_HCV_uf$color)
+
+# Constructing the plot object. The colors will not work the way they should if
+# one of the groups doesn't have any genes
+# "azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen"
+p <- ggplot(data = tumor_adjacent_M_HCV_uf, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-8, 8)) + ylim(c(0, 50)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(tumor_adjacent_M_HCV_uf, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_M_HCV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+
+# Upset plots
+
+# Male vs. female HBV
+
+```{r}
+upset_list <- list("Up Overall"= tumor_adjacent_HBV_uf[which(tumor_adjacent_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_HBV_uf$logFC>0),1], 
+                   "Up Female"=tumor_adjacent_F_HBV_uf[which(tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC>0),1],
+                   "Up Male"=tumor_adjacent_M_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC>0),1],
+                   "Down Overall"= tumor_adjacent_HBV_uf[which(tumor_adjacent_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_HBV_uf$logFC<0),1], 
+                   "Down Female"=tumor_adjacent_F_HBV_uf[which(tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC<0),1],
+                   "Down Male"=tumor_adjacent_M_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC<0),1])
+upset(fromList(upset_list), order.by = "freq", sets=c("Up Overall", "Up Female", "Up Male",
+                                                      "Down Overall", "Down Female", "Down Male"), nsets=6, keep.order = TRUE)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_Male_Female_HBV_Upset.pdf", width=10, height=10)
+upset(fromList(upset_list), order.by = "freq", sets=c("Up Overall", "Up Female", "Up Male",
+                                                      "Down Overall", "Down Female", "Down Male"), nsets=6, keep.order = TRUE)
+dev.off()
+```
+
+# Male vs. female HCV
+
+```{r}
+upset_list <- list("Up Overall"= tumor_adjacent_HCV_uf[which(tumor_adjacent_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_HCV_uf$logFC>0),1], 
+                   "Up Female"=tumor_adjacent_F_HCV_uf[which(tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC>0),1],
+                   "Up Male"=tumor_adjacent_M_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC>0),1],
+                   "Down Overall"= tumor_adjacent_HCV_uf[which(tumor_adjacent_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_HCV_uf$logFC<0),1], 
+                   "Down Female"=tumor_adjacent_F_HCV_uf[which(tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC<0),1],
+                   "Down Male"=tumor_adjacent_M_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC<0),1])
+upset(fromList(upset_list), order.by = "freq", sets=c("Up Overall", "Up Female", "Up Male",
+                                                      "Down Overall", "Down Female", "Down Male"), nsets=6, keep.order = TRUE)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/Tumor_adjacent_Male_Female_HCV_Upset.pdf", width=10, height=10)
+upset(fromList(upset_list), order.by = "freq", sets=c("Up Overall", "Up Female", "Up Male",
+                                                      "Down Overall", "Down Female", "Down Male"), nsets=6, keep.order = TRUE)
+dev.off()
+```
+
+# LogFC plots HBV M vs HBV F
+
+## Significnat in both, same direction
+```{r}
+tumor_adjacent_M_HBV_uf <- tumor_adjacent_M_HBV_uf[match(tumor_adjacent_F_HBV_uf$GENEID, tumor_adjacent_M_HBV_uf$GENEID),]
+identical(tumor_adjacent_M_HBV_uf$GENEID, tumor_adjacent_F_HBV_uf$GENEID)
+
+tumor_adjacent_M_HBV_uf_abbr <- tumor_adjacent_M_HBV_uf[which((tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC>0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC>0) | (tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC<0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC<0)),]
+tumor_adjacent_F_HBV_uf_abbr <- tumor_adjacent_F_HBV_uf[which((tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC>0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC>0) | (tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC<0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC<0)),]
+identical(tumor_adjacent_M_HBV_uf_abbr$GENEID, tumor_adjacent_F_HBV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HBV_uf_abbr, tumor_adjacent_M_HBV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC > 5 | plot$logFC < -5),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HBV_MvF_Significant_same_dir_LogFC.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC > 5 | plot$logFC < -5),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```
+
+## Significnat in both, opposite direction
+```{r}
+tumor_adjacent_M_HBV_uf <- tumor_adjacent_M_HBV_uf[match(tumor_adjacent_F_HBV_uf$GENEID, tumor_adjacent_M_HBV_uf$GENEID),]
+identical(tumor_adjacent_M_HBV_uf$GENEID, tumor_adjacent_F_HBV_uf$GENEID)
+
+tumor_adjacent_M_HBV_uf_abbr <- tumor_adjacent_M_HBV_uf[which((tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC<0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC>0) | (tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC>0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC<0)),]
+tumor_adjacent_F_HBV_uf_abbr <- tumor_adjacent_F_HBV_uf[which((tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC<0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC>0) | (tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HBV_uf$logFC>0 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$logFC<0)),]
+identical(tumor_adjacent_M_HBV_uf_abbr$GENEID, tumor_adjacent_F_HBV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HBV_uf_abbr, tumor_adjacent_M_HBV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot, aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HBV_MvF_Significant_opposite_dir_LogFC.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot, aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```
+
+## Significnat M HBV only
+```{r}
+tumor_adjacent_M_HBV_uf <- tumor_adjacent_M_HBV_uf[match(tumor_adjacent_F_HBV_uf$GENEID, tumor_adjacent_M_HBV_uf$GENEID),]
+identical(tumor_adjacent_M_HBV_uf$GENEID, tumor_adjacent_F_HBV_uf$GENEID)
+
+tumor_adjacent_M_HBV_uf_abbr <- tumor_adjacent_M_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$adj.P.Val>0.05),]
+tumor_adjacent_F_HBV_uf_abbr <- tumor_adjacent_F_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HBV_uf$adj.P.Val>0.05),]
+identical(tumor_adjacent_M_HBV_uf_abbr$GENEID, tumor_adjacent_F_HBV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HBV_uf_abbr, tumor_adjacent_M_HBV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="darkgreen") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$`tumor_adjacent_M_HBV_uf_abbr$logFC` >3 | plot$`tumor_adjacent_M_HBV_uf_abbr$logFC` < -3),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HBV_M_Significant_only.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="darkgreen") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$`tumor_adjacent_M_HBV_uf_abbr$logFC` >3 | plot$`tumor_adjacent_M_HBV_uf_abbr$logFC` < -3),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```
+
+## Significnat F HBV only
+```{r}
+tumor_adjacent_M_HBV_uf <- tumor_adjacent_M_HBV_uf[match(tumor_adjacent_F_HBV_uf$GENEID, tumor_adjacent_M_HBV_uf$GENEID),]
+identical(tumor_adjacent_M_HBV_uf$GENEID, tumor_adjacent_F_HBV_uf$GENEID)
+
+tumor_adjacent_M_HBV_uf_abbr <- tumor_adjacent_M_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val>0.05 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05),]
+tumor_adjacent_F_HBV_uf_abbr <- tumor_adjacent_F_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val>0.05 & tumor_adjacent_F_HBV_uf$adj.P.Val<0.05),]
+identical(tumor_adjacent_M_HBV_uf_abbr$GENEID, tumor_adjacent_F_HBV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HBV_uf_abbr, tumor_adjacent_M_HBV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="firebrick") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >3 | plot$logFC < -3),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HBV_F_Significant_only.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HBV_uf_abbr$logFC`)) + geom_point(color="firebrick") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >3 | plot$logFC < -3),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```
+
+# LogFC plots HCV M vs HCV F
+
+## Significnat in both, same direction
+```{r}
+tumor_adjacent_M_HCV_uf <- tumor_adjacent_M_HCV_uf[match(tumor_adjacent_F_HCV_uf$GENEID, tumor_adjacent_M_HCV_uf$GENEID),]
+identical(tumor_adjacent_M_HCV_uf$GENEID, tumor_adjacent_F_HCV_uf$GENEID)
+
+tumor_adjacent_M_HCV_uf_abbr <- tumor_adjacent_M_HCV_uf[which((tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC>0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC>0) | (tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC<0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC<0)),]
+tumor_adjacent_F_HCV_uf_abbr <- tumor_adjacent_F_HCV_uf[which((tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC>0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC>0) | (tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC<0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC<0)),]
+identical(tumor_adjacent_M_HCV_uf_abbr$GENEID, tumor_adjacent_F_HCV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HCV_uf_abbr, tumor_adjacent_M_HCV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >5 | plot$logFC < -5),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HCV_MvF_Significant_same_dir_LogFC.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >5 | plot$logFC < -5),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```
+
+## Significnat in both, opposite direction
+```{r}
+tumor_adjacent_M_HCV_uf <- tumor_adjacent_M_HCV_uf[match(tumor_adjacent_F_HCV_uf$GENEID, tumor_adjacent_M_HCV_uf$GENEID),]
+identical(tumor_adjacent_M_HCV_uf$GENEID, tumor_adjacent_F_HCV_uf$GENEID)
+
+tumor_adjacent_M_HCV_uf_abbr <- tumor_adjacent_M_HCV_uf[which((tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC<0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC>0) | (tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC>0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC<0)),]
+tumor_adjacent_F_HCV_uf_abbr <- tumor_adjacent_F_HCV_uf[which((tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC<0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC>0) | (tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_M_HCV_uf$logFC>0 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$logFC<0)),]
+identical(tumor_adjacent_M_HCV_uf_abbr$GENEID, tumor_adjacent_F_HCV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HCV_uf_abbr, tumor_adjacent_M_HCV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >0 | plot$logFC < -0),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HCV_MvF_Significant_opposite_dir_LogFC.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="goldenrod") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >0 | plot$logFC < -0),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```
+
+## Significnat M HCV only
+```{r}
+tumor_adjacent_M_HCV_uf <- tumor_adjacent_M_HCV_uf[match(tumor_adjacent_F_HCV_uf$GENEID, tumor_adjacent_M_HCV_uf$GENEID),]
+identical(tumor_adjacent_M_HCV_uf$GENEID, tumor_adjacent_F_HCV_uf$GENEID)
+
+tumor_adjacent_M_HCV_uf_abbr <- tumor_adjacent_M_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$adj.P.Val>0.05),]
+tumor_adjacent_F_HCV_uf_abbr <- tumor_adjacent_F_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val<0.05 & tumor_adjacent_F_HCV_uf$adj.P.Val>0.05),]
+identical(tumor_adjacent_M_HCV_uf_abbr$GENEID, tumor_adjacent_F_HCV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HCV_uf_abbr, tumor_adjacent_M_HCV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="darkgreen") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$`tumor_adjacent_M_HCV_uf_abbr$logFC` >2 | plot$`tumor_adjacent_M_HCV_uf_abbr$logFC` < -2),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HCV_M_Significant_only.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="darkgreen") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$`tumor_adjacent_M_HCV_uf_abbr$logFC` >2 | plot$`tumor_adjacent_M_HCV_uf_abbr$logFC` < -2),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```
+
+## Significnat F HCV only
+```{r}
+tumor_adjacent_M_HCV_uf <- tumor_adjacent_M_HCV_uf[match(tumor_adjacent_F_HCV_uf$GENEID, tumor_adjacent_M_HCV_uf$GENEID),]
+identical(tumor_adjacent_M_HCV_uf$GENEID, tumor_adjacent_F_HCV_uf$GENEID)
+
+tumor_adjacent_M_HCV_uf_abbr <- tumor_adjacent_M_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val>0.05 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05),]
+tumor_adjacent_F_HCV_uf_abbr <- tumor_adjacent_F_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val>0.05 & tumor_adjacent_F_HCV_uf$adj.P.Val<0.05),]
+identical(tumor_adjacent_M_HCV_uf_abbr$GENEID, tumor_adjacent_F_HCV_uf_abbr$GENEID)
+
+plot <- cbind(tumor_adjacent_F_HCV_uf_abbr, tumor_adjacent_M_HCV_uf_abbr$logFC)
+
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="firebrick") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >2 | plot$logFC < -2),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/down_sampled/HCV_F_Significant_only.pdf", width=7, height=7)
+ggplot(plot, aes(x=logFC, y=`tumor_adjacent_M_HCV_uf_abbr$logFC`)) + geom_point(color="firebrick") + theme_minimal() + 
+  geom_text_repel(data=plot[which(plot$logFC >2 | plot$logFC < -2),], aes(label=gene_name, vjust=-0.7), size=3, max.overlaps = 100)
+dev.off()
+```

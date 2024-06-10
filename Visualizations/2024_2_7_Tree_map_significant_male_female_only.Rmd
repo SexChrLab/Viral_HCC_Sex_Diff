@@ -1,0 +1,130 @@
+---
+title: "2024_2_7_Tree_map_significant_male_only"
+output: html_document
+date: "2024-02-08"
+---
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006403","RNA localization",0.21012481426606894,7.411168274405793,0.775660302828464,-0,"RNA localization"),
+c("GO:0006903","vesicle targeting",0.04096856785834408,4.007004901568658,0.7728135371294405,0.19442145,"RNA localization"),
+c("GO:0006913","nucleocytoplasmic transport",0.36092054313071836,3.941183134578437,0.7029968252218532,0.55700417,"RNA localization"),
+c("GO:0015931","nucleobase-containing compound transport",0.36881024378509786,4.270025714300444,0.7769717845648751,0.23072681,"RNA localization"),
+c("GO:0050658","RNA transport",0.20452019976243085,6.621602099051862,0.6337380287072507,0.51357643,"RNA localization"),
+c("GO:0051169","nuclear transport",0.3609238693114327,3.941183134578437,0.7382226771883224,0.67802652,"RNA localization"),
+c("GO:0008380","RNA splicing",0.7198287469292699,7.790484985457369,0.8627397991417035,0,"RNA splicing"),
+c("GO:0000398","mRNA splicing, via spliceosome",0.5066438464060219,4.170053304058364,0.8163112520763494,0.60185152,"RNA splicing"),
+c("GO:0018205","peptidyl-lysine modification",0.3773884638473427,4.530177984021837,0.968877554254548,0.11240696,"RNA splicing"),
+c("GO:0009615","response to virus",0.1725522769170509,4.600326278518962,0.9520684770839489,-0,"response to virus"),
+c("GO:0002221","pattern recognition receptor signaling pathway",0.04313058532265549,4.515700160653214,0.6366628467151988,0.23208753,"response to virus"),
+c("GO:0038127","ERBB signaling pathway",0.013790345241592481,3.64614913925983,0.8661598041077218,0.27705583,"response to virus"),
+c("GO:0090148","membrane fission",0.004560193759339915,3.9362539383865567,0.9948869590914774,0.00654759,"membrane fission"),
+c("GO:1902894","negative regulation of miRNA transcription",0.00268090165574615,3.9351154137137243,0.8543303939045774,-0,"negative regulation of miRNA transcription"),
+c("GO:0043281","regulation of cysteine-type endopeptidase activity involved in apoptotic process",0.029789274477496925,3.705621964412759,0.893332232198266,0.19759398,"negative regulation of miRNA transcription"),
+c("GO:1903053","regulation of extracellular matrix organization",0.006599142537221293,3.8610408291335356,0.9052631700322364,0.12554412,"negative regulation of miRNA transcription"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/male_sig_only_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0022904","respiratory electron transport chain",0.47881036618854816,2.220800687402902,0.07092198165361932,0,"respiratory electron transport chain"),
+c("GO:0006120","mitochondrial electron transport, NADH to ubiquinone",0.029094102708202944,1.330902181847712,0.08252164301307882,0.76215281,"respiratory electron transport chain"),
+c("GO:0019646","aerobic electron transport chain",0.18511858765577172,2.1890031647290717,0.04438869144884745,0.75597283,"respiratory electron transport chain"),
+c("GO:0022900","electron transport chain",1.6021713573797571,1.9063259020001762,0.10694580141203575,0.74786491,"respiratory electron transport chain"),
+c("GO:0042775","mitochondrial ATP synthesis coupled electron transport",0.11859497336926673,2.142063470347029,0.04983287651483807,0.84435016,"respiratory electron transport chain"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/female_sig_only_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```

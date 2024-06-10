@@ -1,0 +1,115 @@
+---
+title: "2024_1_26_Create_visualization_DEA_across_all_comparisons"
+output: html_document
+date: "2024-01-26"
+---
+
+**Purpose:** Create all visualizations for the differential expression analyses done in each comparison
+
+**Methods:**
+
+Extract genes significant in overall, female, and male (inclusive of the ones that are shared with othe categories), predict GO terms, Upset plot of GO terms and Treemap of unique terms to different comparisons)
+
+**Results:**
+
+
+## Libraries
+
+```{r}
+library(ggrepel)
+library(ggplot2)
+library(UpSetR)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+```
+
+## Read in files
+
+```{r}
+# F HBV tumor tumor-adjacent
+tumor_adjacent_F_HBV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HBV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_F_HBV_sig <- tumor_adjacent_F_HBV_uf[which(tumor_adjacent_F_HBV_uf$adj.P.Val < 0.05),]
+
+# F HCV tumor tumor-adjacent
+tumor_adjacent_F_HCV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HCV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_F_HCV_sig <- tumor_adjacent_F_HCV_uf[which(tumor_adjacent_F_HCV_uf$adj.P.Val < 0.05),]
+
+# M HBV tumor tumor-adjacent
+tumor_adjacent_M_HBV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HBV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HBV_sig <- tumor_adjacent_M_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val < 0.05),]
+
+# M HCV tumor tumor-adjacent
+tumor_adjacent_M_HCV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HCV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HCV_sig <- tumor_adjacent_M_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val < 0.05),]
+```
+
+
+### GO analysis for each list
+
+```{r}
+ego_F_HBV <- enrichGO(gene  = tumor_adjacent_F_HBV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+
+ego_F_HCV <- enrichGO(gene  = tumor_adjacent_F_HCV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+
+ego_M_HBV <- enrichGO(gene  = tumor_adjacent_M_HBV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+
+ego_M_HCV <- enrichGO(gene  = tumor_adjacent_M_HCV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+```
+
+## GO Upset plot
+
+```{r}
+ego_F_HBV <- as.data.frame(ego_F_HBV)
+ego_F_HCV <- as.data.frame(ego_F_HCV)
+ego_M_HBV <- as.data.frame(ego_M_HBV)
+ego_M_HCV <- as.data.frame(ego_M_HCV)
+
+upset_list <- list("F_HBV"= ego_F_HBV$ID, 
+                   "F_HCV"= ego_F_HCV$ID,
+                   "M_HBV"=ego_M_HBV$ID,
+                   "M_HCV"=ego_M_HCV$ID)
+upset(fromList(upset_list), order.by = "freq", sets=c("F_HBV", "F_HCV", "M_HBV", "M_HCV"), nsets=6, keep.order = TRUE)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/Upset_male_female_HBV_HCV_all.pdf")
+upset(fromList(upset_list), order.by = "freq", sets=c("F_HBV", "F_HCV", "M_HBV", "M_HCV"), nsets=6, keep.order = TRUE)
+dev.off()
+```
+
+## Print lists for revigo
+```{r}
+all <- ego_F_HBV[which(ego_F_HBV$ID %in% ego_F_HCV$ID & ego_F_HBV$ID %in% ego_M_HBV$ID & ego_F_HBV$ID %in% ego_M_HCV$ID),]
+write.csv(all, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/significant_pathways_M_F_HBV_HCV_all.csv")
+F_HBV_unique <- ego_F_HBV[-which(ego_F_HBV$ID %in% ego_F_HCV$ID | ego_F_HBV$ID %in% ego_M_HBV$ID | ego_F_HBV$ID %in% ego_M_HCV$ID),]
+write.csv(F_HBV_unique, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/significant_pathways_F_HBV_unique.csv")
+F_HCV_unique <- ego_F_HCV[-which(ego_F_HCV$ID %in% ego_F_HBV$ID | ego_F_HCV$ID %in% ego_M_HBV$ID | ego_F_HCV$ID %in% ego_M_HCV$ID),]
+write.csv(F_HCV_unique, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/significant_pathways_F_HCV_unique.csv")
+M_HBV_unique <- ego_M_HBV[-which(ego_M_HBV$ID %in% ego_F_HCV$ID | ego_M_HBV$ID %in% ego_F_HBV$ID | ego_M_HBV$ID %in% ego_M_HCV$ID),]
+write.csv(M_HBV_unique, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/significant_pathways_M_HBV_unique.csv")
+M_HCV_unique <- ego_M_HCV[-which(ego_M_HCV$ID %in% ego_F_HCV$ID | ego_M_HCV$ID %in% ego_F_HBV$ID | ego_M_HCV$ID %in% ego_M_HBV$ID),]
+write.csv(M_HCV_unique, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/significant_pathways_M_HCV_unique.csv")
+```
+

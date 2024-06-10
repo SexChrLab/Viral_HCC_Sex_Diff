@@ -1,0 +1,651 @@
+---
+title: "2024_3_18_revigo_plots_viral_sex_pathway_analysis"
+output: html_document
+date: "2024-03-18"
+---
+
+## Female HBV
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006775","fat-soluble vitamin metabolic process",0.050263446217447064,2.453044089782167,0.9345928141797387,0.03335381,"fat-soluble vitamin metabolic process"),
+c("GO:0006063","uronic acid metabolic process",0.07586963180824086,2.1386991075964272,0.9113468049217006,0.20895985,"fat-soluble vitamin metabolic process"),
+c("GO:0006570","tyrosine metabolic process",0.11567518549880967,2.003375784857393,0.890713349965527,0.32066006,"fat-soluble vitamin metabolic process"),
+c("GO:0006591","ornithine metabolic process",0.14830588056440971,1.5609775663985797,0.8922870305869762,0.46921053,"fat-soluble vitamin metabolic process"),
+c("GO:0009120","deoxyribonucleoside metabolic process",0.022650962131041955,2.020977102518869,0.8936335925932783,0.19316126,"fat-soluble vitamin metabolic process"),
+c("GO:0019585","glucuronate metabolic process",0.054576741508994775,2.1386991075964272,0.9130606409116568,0.43323159,"fat-soluble vitamin metabolic process"),
+c("GO:0009404","toxin metabolic process",0.08737257416575693,1.3839865228465482,0.9658183507257389,0.04423604,"toxin metabolic process"),
+c("GO:0032042","mitochondrial DNA metabolic process",0.03104340239831049,2.836652538689247,0.860630036018344,0.05922578,"mitochondrial DNA metabolic process"),
+c("GO:0007039","protein catabolic process in the vacuole",0.01098041744219716,1.4491516846990418,0.9301692029057372,0.10027682,"mitochondrial DNA metabolic process"),
+c("GO:0018022","peptidyl-lysine methylation",0.0001996439534944938,1.3598669234018175,0.9567303392016699,0.14775858,"mitochondrial DNA metabolic process"),
+c("GO:0019184","nonribosomal peptide biosynthetic process",0.19618345830058925,1.3088749656253624,0.9085843431403895,0.14670612,"mitochondrial DNA metabolic process"),
+c("GO:0020027","hemoglobin metabolic process",0.01229658869116086,1.3088749656253624,0.9467879792039431,0.18135855,"mitochondrial DNA metabolic process"),
+c("GO:0042402","cellular biogenic amine catabolic process",0.08730849092142537,1.3088749656253624,0.9273766671156373,0.35004917,"mitochondrial DNA metabolic process"),
+c("GO:0046501","protoporphyrinogen IX metabolic process",0.1648935818856189,1.351767299878075,0.9262356559585836,0.16696786,"mitochondrial DNA metabolic process"),
+c("GO:0046785","microtubule polymerization",0.0791551304503169,1.3094301621615652,0.8888610235772211,0.64790326,"mitochondrial DNA metabolic process"),
+c("GO:0051258","protein polymerization",0.1780454354145895,1.3094301621615652,0.9315369276228399,0.2547076,"mitochondrial DNA metabolic process"),
+c("GO:0051293","establishment of spindle localization",0.08002764846929285,2.787320828735323,0.7838324383684437,0.32988074,"mitochondrial DNA metabolic process"),
+c("GO:0051653","spindle localization",0.08118361160742762,2.6763692693596624,0.8620474420781674,0.67811207,"mitochondrial DNA metabolic process"),
+c("GO:0048821","erythrocyte development",0.013356426962798297,1.7690939560984857,0.9353338427468947,0.00555049,"erythrocyte development"),
+c("GO:0006885","regulation of pH",0.21364860712110756,1.321105895741943,0.8876162457488666,0.50228718,"erythrocyte development"),
+c("GO:0050665","hydrogen peroxide biosynthetic process",0.0007320278294798107,1.5956586145647904,0.9711450097346068,0.02562706,"hydrogen peroxide biosynthetic process"),
+c("GO:0071294","cellular response to zinc ion",0.00424921204721614,2.4572946739366337,0.9342783043013134,-0,"cellular response to zinc ion"),
+c("GO:0001783","B cell apoptotic process",0.0011091330749694102,1.531107971739506,0.9684345382058964,0.51633267,"cellular response to zinc ion"),
+c("GO:0006991","response to sterol depletion",0.01726057538669062,1.8079251843390656,0.948750934644899,0.15307297,"cellular response to zinc ion"),
+c("GO:0008631","intrinsic apoptotic signaling pathway in response to oxidative stress",0.004922086112697582,2.214872123276073,0.8617450035157869,0.16940852,"cellular response to zinc ion"),
+c("GO:0032011","ARF protein signal transduction",2.4647401665986892E-05,1.3728966021185456,0.9072187530662609,0.24292935,"cellular response to zinc ion"),
+c("GO:0035791","platelet-derived growth factor receptor-beta signaling pathway",0.0021393944646076624,1.3839865228465482,0.8916422159762358,0.21499104,"cellular response to zinc ion"),
+c("GO:0036480","neuron intrinsic apoptotic signaling pathway in response to oxidative stress",0.0002095029141608886,1.3728966021185456,0.8783629590932052,0.63917499,"cellular response to zinc ion"),
+c("GO:0043153","entrainment of circadian clock by photoperiod",0.03754292221763123,1.338888911640843,0.8864348176557905,0.38210762,"cellular response to zinc ion"),
+c("GO:0043200","response to amino acid",0.1436351979487052,2.024510519174736,0.9216902499514045,0.34650647,"cellular response to zinc ion"),
+c("GO:0051591","response to cAMP",0.01177159903567534,1.3049796911605878,0.9298226433091124,0.6649098,"cellular response to zinc ion"),
+c("GO:0051873","killing by host of symbiont cells",0.0017006707149530955,1.4184408021641461,0.942432396835059,0.25307369,"cellular response to zinc ion"),
+c("GO:0071501","cellular response to sterol depletion",0.01714966207919368,1.5956586145647904,0.93847235648773,0.28681047,"cellular response to zinc ion"),
+c("GO:0110096","cellular response to aldehyde",0.05181869726257084,1.4387650793986801,0.9156673789296677,0.62813446,"cellular response to zinc ion"),
+c("GO:1901568","fatty acid derivative metabolic process",0.16104365774539173,3.0119242080148174,0.9368064607265444,0,"fatty acid derivative metabolic process"),
+c("GO:0006749","glutathione metabolic process",0.33273992249082307,1.603562867656916,0.9045599721206709,0.57292566,"fatty acid derivative metabolic process"),
+c("GO:0009261","ribonucleotide catabolic process",0.5649554172869186,1.5078165303932327,0.8497691451802378,0.57797875,"fatty acid derivative metabolic process"),
+c("GO:0016093","polyprenol metabolic process",0.10726549205037496,1.4491516846990418,0.8964881109655564,0.38579361,"fatty acid derivative metabolic process"),
+c("GO:0035337","fatty-acyl-CoA metabolic process",0.10488948252977383,2.182398407692702,0.8145024483976021,0.38514344,"fatty acid derivative metabolic process"),
+c("GO:1902176","negative regulation of oxidative stress-induced intrinsic apoptotic signaling pathway",0.004461179701543627,2.0174841380733586,0.8414169895373185,-0,"negative regulation of oxidative stress-induced intrinsic apoptotic signaling pathway"),
+c("GO:0010812","negative regulation of cell-substrate adhesion",0.00976037105973081,1.4184408021641461,0.9027721458237145,0.31905765,"negative regulation of oxidative stress-induced intrinsic apoptotic signaling pathway"),
+c("GO:0032012","regulation of ARF protein signal transduction",0.05576721100946194,1.3728966021185456,0.8537415677331591,0.51887179,"negative regulation of oxidative stress-induced intrinsic apoptotic signaling pathway"),
+c("GO:0045746","negative regulation of Notch signaling pathway",0.021169653290916142,1.8649568893309307,0.8488066976298404,0.52880296,"negative regulation of oxidative stress-induced intrinsic apoptotic signaling pathway"),
+c("GO:0045922","negative regulation of fatty acid metabolic process",0.013723673247621502,1.9639538811816502,0.8849038071045958,0.30584885,"negative regulation of oxidative stress-induced intrinsic apoptotic signaling pathway"),
+c("GO:1902570","protein localization to nucleolus",0.0037020397302312312,2.4108526301864095,0.8928373425361155,0.00519914,"protein localization to nucleolus"),
+c("GO:0015838","amino-acid betaine transport",0.07081198498638033,1.5620340868575477,0.9149499185023897,0.14907628,"protein localization to nucleolus"),
+c("GO:0034219","carbohydrate transmembrane transport",0.5936967523696258,1.3236960495629557,0.8959003398580984,0.48561637,"protein localization to nucleolus"),
+c("GO:0034501","protein localization to kinetochore",0.02410515882933518,1.77246231025713,0.8715062689234803,0.44429685,"protein localization to nucleolus"),
+c("GO:0034502","protein localization to chromosome",0.05554045491413486,1.4405433839730564,0.875916500740037,0.52032574,"protein localization to nucleolus"),
+c("GO:1905039","carboxylic acid transmembrane transport",1.2848271482650644,1.4876067426733557,0.8804160418114481,0.39665744,"protein localization to nucleolus"),
+c("GO:1904816","positive regulation of protein localization to chromosome, telomeric region",0.0012348348234659432,1.7724575266316118,0.8892251904188566,0.09656673,"positive regulation of protein localization to chromosome, telomeric region"),
+c("GO:0032377","regulation of intracellular lipid transport",0.0009858960666394756,1.5609775663985797,0.905122462367531,0.50986188,"positive regulation of protein localization to chromosome, telomeric region"),
+c("GO:0045840","positive regulation of mitotic nuclear division",0.03637956485899665,1.402368734642913,0.8258827842015699,0.31572537,"positive regulation of protein localization to chromosome, telomeric region"),
+c("GO:1902275","regulation of chromatin organization",0.02889414897303643,1.34479558050021,0.8976950986307646,0.50410236,"positive regulation of protein localization to chromosome, telomeric region"),
+c("GO:1904814","regulation of protein localization to chromosome, telomeric region",0.001449267217960029,1.3839865228465482,0.9039371678097223,0.53554716,"positive regulation of protein localization to chromosome, telomeric region"),
+c("GO:1905709","negative regulation of membrane permeability",0.013479663971128231,1.5733919846995092,0.8927593534526831,0.09610853,"negative regulation of membrane permeability"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/Figures viral sex combined/F_HBV_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+## Female HCV
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0001732","formation of cytoplasmic translation initiation complex",0.08015088547762277,2.0422503815252844,0.8643247354219973,-0,"formation of cytoplasmic translation initiation complex"),
+c("GO:0000966","RNA 5'-end processing",0.11964095242686698,1.338761985090713,0.9356592085580832,0.44128143,"formation of cytoplasmic translation initiation complex"),
+c("GO:0006547","histidine metabolic process",0.3337751133607945,1.3614100782632181,0.9410405383289472,0.39237088,"formation of cytoplasmic translation initiation complex"),
+c("GO:0006743","ubiquinone metabolic process",0.2847144603446476,1.412649020118589,0.9562397815344228,0.26724453,"formation of cytoplasmic translation initiation complex"),
+c("GO:0007076","mitotic chromosome condensation",0.03710173372781007,1.8640371289328794,0.9470350082186421,0.24420203,"formation of cytoplasmic translation initiation complex"),
+c("GO:0009086","methionine biosynthetic process",0.33635076683489007,1.412649020118589,0.9315612996106085,0.2625243,"formation of cytoplasmic translation initiation complex"),
+c("GO:0032984","protein-containing complex disassembly",0.34131475353041985,2.0178550021386727,0.9165280012326007,0.48889944,"formation of cytoplasmic translation initiation complex"),
+c("GO:0034471","ncRNA 5'-end processing",0.11690262610177583,1.4818942781616382,0.9190874413348865,0.26004402,"formation of cytoplasmic translation initiation complex"),
+c("GO:0070922","RISC complex assembly",0.002499246528931071,1.3614100782632181,0.8246632911351128,0.56990681,"formation of cytoplasmic translation initiation complex"),
+c("GO:0150146","cell junction disassembly",0.0009464602239738967,1.7088681889186128,0.9483549153124725,0.59213298,"formation of cytoplasmic translation initiation complex"),
+c("GO:1903232","melanosome assembly",0.004675612096037713,1.8640371289328794,0.9374999564222622,0.35377171,"formation of cytoplasmic translation initiation complex"),
+c("GO:0015914","phospholipid transport",0.23657069067047537,1.8171357061140823,0.943074080981571,-0,"phospholipid transport"),
+c("GO:0006613","cotranslational protein targeting to membrane",0.17551414726349265,1.3770725169274127,0.9551883096635332,0.44440753,"phospholipid transport"),
+c("GO:0015748","organophosphate ester transport",0.37259230624455725,1.5639268141094418,0.9589186188124096,0.39557794,"phospholipid transport"),
+c("GO:0015886","heme transport",0.05985128546551597,1.3614100782632181,0.9626538118379558,0.34186719,"phospholipid transport"),
+c("GO:0098856","intestinal lipid absorption",0.010911404717532396,1.7304159867369882,0.8969980924213397,0.60870649,"phospholipid transport"),
+c("GO:0019076","viral release from host cell",0.008794192914424123,1.7830091940924448,0.9575691258336197,-0,"viral release from host cell"),
+c("GO:0035891","exit from host cell",0.009240310884578487,1.7830091940924448,0.9575198843486096,0.69597461,"viral release from host cell"),
+c("GO:0044794","positive regulation by host of viral process",0.0020186221964443264,1.4818942781616382,0.9594885310065261,0.63363953,"viral release from host cell"),
+c("GO:0019646","aerobic electron transport chain",0.27987864013778097,1.6224781490137457,0.9599384110324787,0.06416474,"aerobic electron transport chain"),
+c("GO:0033631","cell-cell adhesion mediated by integrin",0.00197425687344555,1.3460246475793105,0.978634513544328,0.00586735,"cell-cell adhesion mediated by integrin"),
+c("GO:0046148","pigment biosynthetic process",0.584397287721049,1.3614100782632181,0.9857178769279701,0.0381254,"pigment biosynthetic process"),
+c("GO:0046596","regulation of viral entry into host cell",0.009656851972733664,2.1998679639297,0.8950546420537181,0,"regulation of viral entry into host cell"),
+c("GO:0001960","negative regulation of cytokine-mediated signaling pathway",0.009632204571067678,1.3622476717803633,0.8627494433179145,0.60445381,"regulation of viral entry into host cell"),
+c("GO:0002637","regulation of immunoglobulin production",0.012225111226329499,1.3770725169274127,0.8090985779187829,0.60753762,"regulation of viral entry into host cell"),
+c("GO:0002688","regulation of leukocyte chemotaxis",0.027632202007737906,1.4818942781616382,0.7554722349812705,0.63853609,"regulation of viral entry into host cell"),
+c("GO:0002822","regulation of adaptive immune response based on somatic recombination of immune receptors built from immunoglobulin superfamily domains",0.04143474694069056,1.8330181469481224,0.7832844384082687,0.11276134,"regulation of viral entry into host cell"),
+c("GO:0033089","positive regulation of T cell differentiation in thymus",0.0008478706173099491,1.6629441709553132,0.8170949804830069,0.52425586,"regulation of viral entry into host cell"),
+c("GO:0043409","negative regulation of MAPK cascade",0.09903572463410193,1.5954046807204367,0.8443528253292456,0.49041016,"regulation of viral entry into host cell"),
+c("GO:0050848","regulation of calcium-mediated signaling",0.013578253577792179,1.573910534359131,0.8735479985172607,0.57420767,"regulation of viral entry into host cell"),
+c("GO:0050864","regulation of B cell activation",0.042635075401824124,1.4278340373895122,0.7892807311517664,0.663023,"regulation of viral entry into host cell"),
+c("GO:0090224","regulation of spindle organization",0.027760368496401032,1.6064838296973951,0.9125842202797005,0.12021337,"regulation of viral entry into host cell"),
+c("GO:0046825","regulation of protein export from nucleus",0.004692865277203904,1.78773127270085,0.9199567731544803,0.09997761,"regulation of protein export from nucleus"),
+c("GO:0060768","regulation of epithelial cell proliferation involved in prostate gland development",0.0010204024289718573,1.3614100782632181,0.9116617684904792,0.09262152,"regulation of epithelial cell proliferation involved in prostate gland development"),
+c("GO:0070661","leukocyte proliferation",0.014919072228421865,1.406158811975209,0.9948921711572861,0.00661182,"leukocyte proliferation"),
+c("GO:0071887","leukocyte apoptotic process",0.007187182325801777,1.4215481958715117,0.9951021518945382,0.00632214,"leukocyte apoptotic process"),
+c("GO:0098760","response to interleukin-7",0.0012101874217999564,2.012368721316177,0.946998001042454,-0,"response to interleukin-7"),
+c("GO:0002285","lymphocyte activation involved in immune response",0.02120908913358172,1.6119585802295004,0.8595923910798812,0.14494788,"response to interleukin-7"),
+c("GO:0007586","digestion",0.043717096334960945,1.3866498748333325,0.9415606042498867,0.37556823,"response to interleukin-7"),
+c("GO:0009756","carbohydrate mediated signaling",0.0019545389521127606,1.3614100782632181,0.8685915704339959,0.3789472,"response to interleukin-7"),
+c("GO:0042088","T-helper 1 type immune response",0.0020383401177771158,1.412649020118589,0.9270876276616892,0.5206522,"response to interleukin-7"),
+c("GO:0044320","cellular response to leptin stimulus",0.0030069830032504008,1.3460246475793105,0.9360962340055581,0.48234329,"response to interleukin-7"),
+c("GO:0044321","response to leptin",0.004690400537037305,1.4818942781616382,0.9411990649033346,0.37041441,"response to interleukin-7"),
+c("GO:0071478","cellular response to radiation",0.10675529083588903,1.500641745036831,0.9551853385836043,0.18738546,"response to interleukin-7"),
+c("GO:1901658","glycosyl compound catabolic process",0.18862656494979768,1.78773127270085,0.9450807182515718,0.04954962,"glycosyl compound catabolic process"),
+c("GO:0006027","glycosaminoglycan catabolic process",0.1581525175299715,1.5560214468532012,0.9289830746873479,0.66571123,"glycosyl compound catabolic process"),
+c("GO:0061615","glycolytic process through fructose-6-phosphate",0.05521757395231043,1.412649020118589,0.8895638495141687,0.6148565,"glycosyl compound catabolic process"),
+c("GO:1901838","positive regulation of transcription of nucleolar large rRNA by RNA polymerase I",0.0010770914528036271,1.995509628250585,0.8775416907698874,0.09286363,"positive regulation of transcription of nucleolar large rRNA by RNA polymerase I"),
+c("GO:0010921","regulation of phosphatase activity",0.0003795699856561981,1.7533839490796774,0.8631527110683193,0.13597454,"positive regulation of transcription of nucleolar large rRNA by RNA polymerase I"),
+c("GO:0051549","positive regulation of keratinocyte migration",0.0010647677519706336,1.412649020118589,0.8441062249294485,0.26513054,"positive regulation of transcription of nucleolar large rRNA by RNA polymerase I"),
+c("GO:1904424","regulation of GTP binding",6.408324433156591E-05,1.6629441709553132,0.8923526593665048,0.60160931,"positive regulation of transcription of nucleolar large rRNA by RNA polymerase I"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/Figures viral sex combined/F_HCV_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+## Male HBV
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0000028","ribosomal small subunit assembly",0.18744841915016353,2.654689996782927,0.9430130832158211,0.00866819,"ribosomal small subunit assembly"),
+c("GO:0000463","maturation of LSU-rRNA from tricistronic rRNA transcript (SSU-rRNA, 5.8S rRNA, LSU-rRNA)",0.09433053565606503,1.3240566119766621,0.8474447791493324,0.56833733,"ribosomal small subunit assembly"),
+c("GO:0006921","cellular component disassembly involved in execution phase of apoptosis",0.029966310945506863,1.384286024732003,0.9500920654886663,0.25499346,"ribosomal small subunit assembly"),
+c("GO:0007076","mitotic chromosome condensation",0.03710173372781007,2.0813010080528787,0.9505081105173686,0.35383093,"ribosomal small subunit assembly"),
+c("GO:0008631","intrinsic apoptotic signaling pathway in response to oxidative stress",0.004922086112697582,1.350737205095247,0.8777925424575262,0.61072508,"ribosomal small subunit assembly"),
+c("GO:0031579","membrane raft organization",0.009373406853574814,1.548943823512808,0.9484940620926824,0.23594089,"ribosomal small subunit assembly"),
+c("GO:0043001","Golgi to plasma membrane protein transport",0.04686210478754088,1.5458304059314432,0.9105918130457356,0.61190031,"ribosomal small subunit assembly"),
+c("GO:0045039","protein insertion into mitochondrial inner membrane",0.03509789997236533,1.492378872603688,0.872230789920673,0.65479336,"ribosomal small subunit assembly"),
+c("GO:0065005","protein-lipid complex assembly",0.002974941381084618,1.662888133491359,0.961809960768378,0.44169233,"ribosomal small subunit assembly"),
+c("GO:0070071","proton-transporting two-sector ATPase complex assembly",0.0500145074606206,1.7754979373371775,0.9557982365428354,0.53149722,"ribosomal small subunit assembly"),
+c("GO:0071816","tail-anchored membrane protein insertion into ER membrane",0.011742022153676155,1.5489416253337138,0.8954561414122094,0.46882153,"ribosomal small subunit assembly"),
+c("GO:0071887","leukocyte apoptotic process",0.007187182325801777,1.3036900579186899,0.9803626479695083,0.62382166,"ribosomal small subunit assembly"),
+c("GO:0090110","COPII-coated vesicle cargo loading",0.04106750065586736,1.3240566119766621,0.8919915678944772,0.61251937,"ribosomal small subunit assembly"),
+c("GO:0001522","pseudouridine synthesis",0.2739262926354451,1.797593863372116,0.8733153359918409,0.0708595,"pseudouridine synthesis"),
+c("GO:0000725","recombinational repair",0.5622959626471585,1.3728162677452418,0.8083728191958576,0.59139946,"pseudouridine synthesis"),
+c("GO:0006270","DNA replication initiation",0.18677061560434888,1.6802959218942242,0.8790920682708425,0.28378526,"pseudouridine synthesis"),
+c("GO:0006310","DNA recombination",1.8258671917154758,1.3479504225203363,0.8589629467892387,0.52803186,"pseudouridine synthesis"),
+c("GO:0006517","protein deglycosylation",9.119538616415149E-05,1.3240566119766621,0.9054890891693677,0.26808071,"pseudouridine synthesis"),
+c("GO:0006787","porphyrin-containing compound catabolic process",0.029663147905015223,1.492378872603688,0.8494628520036714,0.17246965,"pseudouridine synthesis"),
+c("GO:0016073","snRNA metabolic process",0.2028998752545707,1.4107020163953634,0.8799436446577515,0.38076151,"pseudouridine synthesis"),
+c("GO:0018108","peptidyl-tyrosine phosphorylation",0.0004411884898211653,1.3233983974063046,0.9088332827944845,0.29126179,"pseudouridine synthesis"),
+c("GO:0033015","tetrapyrrole catabolic process",0.029668077385348424,1.492378872603688,0.8534195267240079,0.59680841,"pseudouridine synthesis"),
+c("GO:0042537","benzene-containing compound metabolic process",0.3046221666702652,1.548943823512808,0.9037864632331944,0.20563316,"pseudouridine synthesis"),
+c("GO:0080009","mRNA methylation",0.037069692105644286,1.3655315468121014,0.8870977671747019,0.56901622,"pseudouridine synthesis"),
+c("GO:0099116","tRNA 5'-end processing",0.07304257483715215,1.3240566119766621,0.8815149505554871,0.45314007,"pseudouridine synthesis"),
+c("GO:0001890","placenta development",0.011796246437341326,1.492378872603688,0.9711167302955723,-0,"placenta development"),
+c("GO:0007623","circadian rhythm",0.10049731555289494,1.8132890904843095,1,-0,"circadian rhythm"),
+c("GO:0019646","aerobic electron transport chain",0.27987864013778097,2.8831077999759063,0.9115137623372837,0,"aerobic electron transport chain"),
+c("GO:0006098","pentose-phosphate shunt",0.21373487302693853,1.4107020163953634,0.7664480089613032,0.59729418,"aerobic electron transport chain"),
+c("GO:0022600","digestive system process",0.03207859326828194,1.7683177491006419,0.9653326797682635,-0,"digestive system process"),
+c("GO:0001706","endoderm formation",0.013474734490795035,1.3262864248747337,0.9520833603342078,0.35963495,"digestive system process"),
+c("GO:0002292","T cell differentiation involved in immune response",0.008495959354265682,1.5701679721251243,0.8896129605048633,0.68939918,"digestive system process"),
+c("GO:0045123","cellular extravasation",0.009935367611559316,1.3240566119766621,0.9578701252550547,0.50945626,"digestive system process"),
+c("GO:0048821","erythrocyte development",0.013356426962798297,1.6006208335048073,0.9277603942606896,0.35847888,"digestive system process"),
+c("GO:0051546","keratinocyte migration",0.0005619607579845011,1.4107020163953634,0.9601348608202476,0.30206799,"digestive system process"),
+c("GO:0072567","chemokine (C-X-C motif) ligand 2 production",2.4647401665986893E-06,1.4107020163953634,0.936666081058018,0.23791236,"digestive system process"),
+c("GO:0097401","synaptic vesicle lumen acidification",0.0015897574074561546,1.3240566119766621,0.8906020914905661,0.37902473,"digestive system process"),
+c("GO:0034219","carbohydrate transmembrane transport",0.5936967523696258,2.3288275276854855,0.9128339639866253,0.00957625,"carbohydrate transmembrane transport"),
+c("GO:0015748","organophosphate ester transport",0.37259230624455725,1.7711419482876405,0.9398932409382318,0.42953445,"carbohydrate transmembrane transport"),
+c("GO:0032366","intracellular sterol transport",0.034715865246542535,1.6227775736698988,0.9171451508881276,0.43316184,"carbohydrate transmembrane transport"),
+c("GO:0032507","maintenance of protein location in cell",0.09837517426945347,1.8839795481309956,0.9232080772619405,0.21595566,"carbohydrate transmembrane transport"),
+c("GO:0046323","glucose import",0.01481308840125812,1.7235195376498174,0.925154055049864,0.69646283,"carbohydrate transmembrane transport"),
+c("GO:1903513","endoplasmic reticulum to cytosol transport",0.041313974672527225,1.8102270517385588,0.929912479236302,0.36216518,"carbohydrate transmembrane transport"),
+c("GO:0036109","alpha-linolenic acid metabolic process",2.9576881999184272E-05,2.5922434562523997,0.9029433392698387,0.03991096,"alpha-linolenic acid metabolic process"),
+c("GO:0006027","glycosaminoglycan catabolic process",0.1581525175299715,2.0080705383167063,0.8207758569207697,0.39701473,"alpha-linolenic acid metabolic process"),
+c("GO:0006047","UDP-N-acetylglucosamine metabolic process",0.1231482776839369,1.7727281929306538,0.8049886666654761,0.45906736,"alpha-linolenic acid metabolic process"),
+c("GO:0006104","succinyl-CoA metabolic process",0.03182718977128887,1.7845005974898358,0.7931329052847743,0.412733,"alpha-linolenic acid metabolic process"),
+c("GO:0006516","glycoprotein catabolic process",0.052195802508060433,1.492378872603688,0.8303257347164835,0.60465131,"alpha-linolenic acid metabolic process"),
+c("GO:0006555","methionine metabolic process",0.34006759500612094,1.7754979373371775,0.8314925076683806,0.57473084,"alpha-linolenic acid metabolic process"),
+c("GO:0006560","proline metabolic process",0.15504448017989056,2.5922434562523997,0.8506308311454798,0.20796918,"alpha-linolenic acid metabolic process"),
+c("GO:0006775","fat-soluble vitamin metabolic process",0.050263446217447064,1.3287300769284573,0.9101992611891577,0.21957799,"alpha-linolenic acid metabolic process"),
+c("GO:0009065","glutamine family amino acid catabolic process",0.20902475456856845,1.7727281929306538,0.8102617444382306,0.69285698,"alpha-linolenic acid metabolic process"),
+c("GO:0009072","aromatic amino acid metabolic process",0.7377977862098182,1.384286024732003,0.8260839864945335,0.4864356,"alpha-linolenic acid metabolic process"),
+c("GO:0009125","nucleoside monophosphate catabolic process",0.02796740667039533,1.3655315468121014,0.8017573970909574,0.61689852,"alpha-linolenic acid metabolic process"),
+c("GO:0009223","pyrimidine deoxyribonucleotide catabolic process",0.061689981629798586,1.5872547428168076,0.7686189232999756,0.61195245,"alpha-linolenic acid metabolic process"),
+c("GO:0009225","nucleotide-sugar metabolic process",0.4732966599714465,2.0380396714749853,0.7915185030076715,0.26122695,"alpha-linolenic acid metabolic process"),
+c("GO:0015936","coenzyme A metabolic process",0.1728177215212337,1.5872547428168076,0.7758218571175151,0.66521501,"alpha-linolenic acid metabolic process"),
+c("GO:0015986","proton motive force-driven ATP synthesis",0.3331613930593114,1.5757475990296408,0.7626302586276931,0.52704194,"alpha-linolenic acid metabolic process"),
+c("GO:0016137","glycoside metabolic process",0.12090536413233209,1.6332505387291507,0.9001804975675759,0.38818216,"alpha-linolenic acid metabolic process"),
+c("GO:0019377","glycolipid catabolic process",0.0663976353480021,1.5489416253337138,0.8305430940626449,0.61522144,"alpha-linolenic acid metabolic process"),
+c("GO:0033540","fatty acid beta-oxidation using acyl-CoA oxidase",0.023360807299022377,1.7727281929306538,0.840167084177174,0.33063237,"alpha-linolenic acid metabolic process"),
+c("GO:0043650","dicarboxylic acid biosynthetic process",0.5635480506517907,1.492378872603688,0.8528010020774339,0.38392723,"alpha-linolenic acid metabolic process"),
+c("GO:0043651","linoleic acid metabolic process",0.013807474413285857,2.1006612079543916,0.8682081169898733,0.5341254,"alpha-linolenic acid metabolic process"),
+c("GO:0051156","glucose 6-phosphate metabolic process",0.29545579799068467,1.4611436646217566,0.8542691369099558,0.41921251,"alpha-linolenic acid metabolic process"),
+c("GO:0051791","medium-chain fatty acid metabolic process",0.020237981507941837,1.5153182349292464,0.8705457157023753,0.45860092,"alpha-linolenic acid metabolic process"),
+c("GO:0061621","canonical glycolysis",0.032421192151439154,1.3655315468121014,0.7272149800822607,0.69052881,"alpha-linolenic acid metabolic process"),
+c("GO:1901568","fatty acid derivative metabolic process",0.16104365774539173,1.421208962471944,0.9357321763263091,0.34604236,"alpha-linolenic acid metabolic process"),
+c("GO:1901657","glycosyl compound metabolic process",0.6654330149184807,1.5162889788197809,0.886837008147058,0.45204838,"alpha-linolenic acid metabolic process"),
+c("GO:0042398","cellular modified amino acid biosynthetic process",0.5343877097407617,1.6034062693872835,0.8938994626275416,0.09793689,"cellular modified amino acid biosynthetic process"),
+c("GO:0042158","lipoprotein biosynthetic process",0.27930189093879687,1.4133595368867233,0.8942774188578437,0.30295385,"cellular modified amino acid biosynthetic process"),
+c("GO:0044794","positive regulation by host of viral process",0.0020186221964443264,1.6332505387291507,0.9861809808825561,-0,"positive regulation by host of viral process"),
+c("GO:0019076","viral release from host cell",0.008794192914424123,1.4611436646217566,0.9855214875461984,0.63363953,"positive regulation by host of viral process"),
+c("GO:0035891","exit from host cell",0.009240310884578487,1.4611436646217566,0.9855045627502389,0.69597461,"positive regulation by host of viral process"),
+c("GO:0046149","pigment catabolic process",0.025081195935308262,1.480681715587677,0.9713881376831839,0.03301842,"pigment catabolic process"),
+c("GO:0048511","rhythmic process",0.1547413171393989,1.667384242732634,1,-0,"rhythmic process"),
+c("GO:0090201","negative regulation of release of cytochrome c from mitochondria",0.0018707377864484052,2.36436759308998,0.8465078544396282,-0,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0000289","nuclear-transcribed mRNA poly(A) tail shortening",0.04725399847403007,1.4382753024502293,0.6765277885987764,0.57412093,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0010811","positive regulation of cell-substrate adhesion",0.02681144353226054,1.6850534665216088,0.8883969995401865,0.11961303,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0010827","regulation of glucose transmembrane transport",0.012493767904488756,1.8679389591444313,0.9137672324200585,0.10358884,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0010884","positive regulation of lipid storage",0.012649046534984472,1.4107020163953634,0.8915974512277135,0.52003612,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0010921","regulation of phosphatase activity",0.0003795699856561981,1.5153182349292464,0.898100063135851,0.15027035,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0019218","regulation of steroid metabolic process",0.0188035027309814,1.6856964486094876,0.9116017278651869,0.10934308,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0030449","regulation of complement activation",0.021669995544735674,1.457317540430272,0.8656857471312945,0.59597407,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0031397","negative regulation of protein ubiquitination",0.0186161824783199,1.6332505387291507,0.8440482064631853,0.6550023,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0032435","negative regulation of proteasomal ubiquitin-dependent protein catabolic process",0.01855702871432153,2.0828660315033805,0.8358044485441254,0.29282733,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0033084","regulation of immature T cell proliferation in thymus",0.003379158768406803,1.7727281929306538,0.9019129931651347,0.10676529,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0033238","regulation of amine metabolic process",0.01681199267636966,1.5611700836990552,0.911302526805483,0.24365881,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0034350","regulation of glial cell apoptotic process",0.0008552648378097452,1.480681715587677,0.9191900295573953,0.44964617,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0045860","positive regulation of protein kinase activity",0.0015601805254569702,1.416026922160968,0.8408949572188965,0.69388103,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0045931","positive regulation of mitotic cell cycle",0.05571791620612997,1.37885193789328,0.890678206312383,0.38611922,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0046329","negative regulation of JNK cascade",0.006925919868142317,1.6802959218942242,0.8608526267887163,0.47747429,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0046825","regulation of protein export from nucleus",0.004692865277203904,1.7723432753647776,0.9177685988714276,0.52359559,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0050730","regulation of peptidyl-tyrosine phosphorylation",0.040128434652393255,1.4812419104987595,0.8595411896004558,0.69799902,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0050766","positive regulation of phagocytosis",0.009181157120580118,1.707256949953371,0.8805221122773572,0.54281461,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0050848","regulation of calcium-mediated signaling",0.013578253577792179,1.66112009644585,0.8825312202080712,0.49155949,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0051053","negative regulation of DNA metabolic process",0.09047568203550468,1.3240566119766621,0.8646794863717295,0.48767749,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0070613","regulation of protein processing",0.008338215983603367,1.6859899497508337,0.8633559218025461,0.63817402,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0071677","positive regulation of mononuclear cell migration",0.016873611180534626,1.6097114310890221,0.8731152580654773,0.5376308,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0080164","regulation of nitric oxide metabolic process",0.012676158676817059,1.379352403803873,0.912612487726443,0.18030749,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1900744","regulation of p38MAPK cascade",0.010110364163387823,1.5931677993750997,0.8819622039694567,0.60512899,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1901030","positive regulation of mitochondrial outer membrane permeabilization involved in apoptotic signaling pathway",0.000594002380150284,1.7727281929306538,0.8152359980446662,0.64374286,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1901836","regulation of transcription of nucleolar large rRNA by RNA polymerase I",0.001663699612454115,1.5153182349292464,0.9176865752107811,0.17276382,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1901857","positive regulation of cellular respiration",0.0012003284611335617,1.492378872603688,0.8941482906098588,0.31034035,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1902175","regulation of oxidative stress-induced intrinsic apoptotic signaling pathway",0.005348486161519155,2.1006612079543916,0.872575149861345,0.63411069,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1903311","regulation of mRNA metabolic process",0.4779772015478174,1.595567130617998,0.888008960928054,0.2430063,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1903317","regulation of protein maturation",0.008707927008593169,1.78639430395468,0.8848375183567522,0.42460819,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1903894","regulation of IRE1-mediated unfolded protein response",0.0009292070428077058,1.7727281929306538,0.8860883242912437,0.34941537,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1904262","negative regulation of TORC1 signaling",0.04507023868642363,1.384286024732003,0.849382175825627,0.67015217,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:1904407","positive regulation of nitric oxide metabolic process",0.009314253089576447,1.4301038464085987,0.8761471144568377,0.33465967,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:2000343","positive regulation of chemokine (C-X-C motif) ligand 2 production",0.0024672049067652876,1.480681715587677,0.8700568938275349,0.43431488,"negative regulation of release of cytochrome c from mitochondria"),
+c("GO:0097237","cellular response to toxic substance",0.8674283305319096,2.108941254750552,0.9017935433670718,0.01067332,"cellular response to toxic substance"),
+c("GO:0001101","response to acid chemical",0.16387317945664703,1.4315330968813627,0.9294965564361122,0.51572388,"cellular response to toxic substance"),
+c("GO:0006991","response to sterol depletion",0.01726057538669062,1.3655315468121014,0.9474235783101111,0.28681047,"cellular response to toxic substance"),
+c("GO:0008286","insulin receptor signaling pathway",0.040655889048045374,1.5489416253337138,0.8438563668390123,0.66462754,"cellular response to toxic substance"),
+c("GO:0009314","response to radiation",0.3264597645463296,1.4693044131766095,0.9452499802385033,0.27379294,"cellular response to toxic substance"),
+c("GO:0030970","retrograde protein transport, ER to cytosol",0.041313974672527225,1.8102270517385588,0.7309383346253011,0.45905228,"cellular response to toxic substance"),
+c("GO:0034405","response to fluid shear stress",0.0024400927649327023,1.4382753024502293,0.9526513840344858,0.2226162,"cellular response to toxic substance"),
+c("GO:0034616","response to laminar fluid shear stress",0.0008182937353107649,1.7727281929306538,0.9551510038585831,0.1741807,"cellular response to toxic substance"),
+c("GO:0051593","response to folic acid",0.0005964671203168828,1.480681715587677,0.9375256838821258,0.52306454,"cellular response to toxic substance"),
+c("GO:0071501","cellular response to sterol depletion",0.01714966207919368,1.3240566119766621,0.9369858497152054,0.25772496,"cellular response to toxic substance"),
+c("GO:0071548","response to dexamethasone",0.013891275578950212,1.4301038464085987,0.9245896566537593,0.58231943,"cellular response to toxic substance"),
+c("GO:0097501","stress response to metal ion",0.019210184858470182,1.6332505387291507,0.9250491979787336,0.43263159,"cellular response to toxic substance"),
+c("GO:0104004","cellular response to environmental stimulus",0.2105652171726926,1.350737205095247,0.9405947982505903,0.3103146,"cellular response to toxic substance"),
+c("GO:1990169","stress response to copper ion",0.009782553721230196,1.3240566119766621,0.9245226268250253,0.64056102,"cellular response to toxic substance"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/Figures viral sex combined/M_HBV_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+
+
+```
+
+## Male HCV
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0001906","cell killing",0.06180828915779532,1.3986182654244694,0.9942579690137445,0.0074825,"cell killing"),
+c("GO:0006509","membrane protein ectodomain proteolysis",0.0287709119647065,2.4352538294130093,0.9560092907564324,0.04472096,"membrane protein ectodomain proteolysis"),
+c("GO:0000380","alternative mRNA splicing, via spliceosome",0.026170611088944883,1.5442236560521667,0.9463718202647073,0.28116773,"membrane protein ectodomain proteolysis"),
+c("GO:0000447","endonucleolytic cleavage in ITS1 to separate SSU-rRNA from 5.8S rRNA and LSU-rRNA from tricistronic rRNA transcript (SSU-rRNA, 5.8S rRNA, LSU-rRNA)",0.0355267647613535,1.5442236560521667,0.9069827248079666,0.46034112,"membrane protein ectodomain proteolysis"),
+c("GO:0000966","RNA 5'-end processing",0.11964095242686698,1.488055654994876,0.9421681382876445,0.44128143,"membrane protein ectodomain proteolysis"),
+c("GO:0006352","DNA-templated transcription initiation",0.790341117081369,1.4076220586950563,0.9330367628642788,0.35499501,"membrane protein ectodomain proteolysis"),
+c("GO:0006476","protein deacetylation",0.00010844856733034232,1.4560526690652205,0.9571226576116252,0.63333535,"membrane protein ectodomain proteolysis"),
+c("GO:0006479","protein methylation",0.000579213939150692,1.3941716695874597,0.954688783619598,0.32093016,"membrane protein ectodomain proteolysis"),
+c("GO:0008213","protein alkylation",0.000579213939150692,1.3941716695874597,0.9560692480429769,0.32093016,"membrane protein ectodomain proteolysis"),
+c("GO:0010586","miRNA metabolic process",0.02921949467502746,1.7160590880403805,0.9518039442204564,0.10583304,"membrane protein ectodomain proteolysis"),
+c("GO:0018126","protein hydroxylation",0.00015774337066231612,1.7008619540631489,0.9585994811072515,0.30099218,"membrane protein ectodomain proteolysis"),
+c("GO:0018394","peptidyl-lysine acetylation",0.00015281389032911874,1.866498774697575,0.9547293824632922,0.30053644,"membrane protein ectodomain proteolysis"),
+c("GO:0031124","mRNA 3'-end processing",0.1477488492867584,1.4187872998218267,0.9402493057141418,0.58699874,"membrane protein ectodomain proteolysis"),
+c("GO:0031145","anaphase-promoting complex-dependent catabolic process",0.10050470977339475,1.4981639361866723,0.9374991012097883,0.62116436,"membrane protein ectodomain proteolysis"),
+c("GO:0031167","rRNA methylation",0.4244257919481277,1.3649971184222347,0.8722976092294819,0.61263239,"membrane protein ectodomain proteolysis"),
+c("GO:0033619","membrane protein proteolysis",0.05374119459251781,2.143862732767319,0.9543345905242024,0.35577129,"membrane protein ectodomain proteolysis"),
+c("GO:0034471","ncRNA 5'-end processing",0.11690262610177583,1.6955293132163276,0.9409348504676543,0.40847702,"membrane protein ectodomain proteolysis"),
+c("GO:0035601","protein deacylation",0.01118499087602485,1.4843228647305537,0.94683749588846,0.37791049,"membrane protein ectodomain proteolysis"),
+c("GO:0043162","ubiquitin-dependent protein catabolic process via the multivesicular body sorting pathway",0.08569162137213662,1.8242982171072044,0.9381227743291587,0.38238273,"membrane protein ectodomain proteolysis"),
+c("GO:0043543","protein acylation",0.0009415307436406993,1.6882732567146062,0.9550431582097563,0.3290721,"membrane protein ectodomain proteolysis"),
+c("GO:0045116","protein neddylation",0.03825030264544506,1.9349326665323647,0.9437468115038141,0.54009574,"membrane protein ectodomain proteolysis"),
+c("GO:0046777","protein autophosphorylation",0.001434478776960437,1.3135479338906513,0.943707352513901,0.33647,"membrane protein ectodomain proteolysis"),
+c("GO:0070936","protein K48-linked ubiquitination",0.051212371181587564,2.2222690604683235,0.9418232952359527,0.20891207,"membrane protein ectodomain proteolysis"),
+c("GO:0098732","macromolecule deacylation",0.07204681980984629,1.651862401746171,0.9563353523755976,0.35848469,"membrane protein ectodomain proteolysis"),
+c("GO:0016049","cell growth",0.07489112996210118,1.9202784659193697,0.9893649966380027,0.00758591,"cell growth"),
+c("GO:0019081","viral translation",0.0021369297244410636,2.169574302506937,1,-0,"viral translation"),
+c("GO:0022617","extracellular matrix disassembly",0.002250307772104603,2.328608768561058,0.9602260676976131,0.00605763,"extracellular matrix disassembly"),
+c("GO:0001731","formation of translation preinitiation complex",0.04747828982919055,1.5442236560521667,0.8842818636999349,0.5448786,"extracellular matrix disassembly"),
+c("GO:0003014","renal system process",0.014943719630087853,1.4387296084650816,0.9449950446902409,0.33827113,"extracellular matrix disassembly"),
+c("GO:0003071","renal system process involved in regulation of systemic arterial blood pressure",0.0029305760580858415,1.4981639361866723,0.8625251655504618,0.45892308,"extracellular matrix disassembly"),
+c("GO:0006997","nucleus organization",0.12424015757774012,1.404805872200707,0.9468959139052372,0.34357957,"extracellular matrix disassembly"),
+c("GO:0007565","female pregnancy",0.009331506270742636,1.4616608812465832,0.9434503653186734,0.32963755,"extracellular matrix disassembly"),
+c("GO:0008053","mitochondrial fusion",0.036667939458488695,1.7590646010269657,0.9490471812115465,0.21484789,"extracellular matrix disassembly"),
+c("GO:0009048","dosage compensation by inactivation of X chromosome",0.0023020673156031756,1.421246960209955,0.8200677165615557,0.31549067,"extracellular matrix disassembly"),
+c("GO:0017004","cytochrome complex assembly",0.2776653034681753,2.0409874820630987,0.9302932681369334,0.41591038,"extracellular matrix disassembly"),
+c("GO:0030865","cortical cytoskeleton organization",0.1331206163979952,1.3127481928134033,0.9431715680804535,0.55909138,"extracellular matrix disassembly"),
+c("GO:0031529","ruffle organization",0.004288647889881719,1.9468634494963404,0.9610746505642311,0.19086926,"extracellular matrix disassembly"),
+c("GO:0032602","chemokine production",2.4647401665986893E-06,1.7160590880403805,0.9321499924863208,0.2278768,"extracellular matrix disassembly"),
+c("GO:0032613","interleukin-10 production",0.0001409831375294451,1.459208729046746,0.9209560714585396,0.69655489,"extracellular matrix disassembly"),
+c("GO:0034369","plasma lipoprotein particle remodeling",0.010406132983379666,2.1661138773539883,0.8069586742088565,0.18467511,"extracellular matrix disassembly"),
+c("GO:0034551","mitochondrial respiratory chain complex III assembly",0.03968724616257209,1.4981639361866723,0.9307091279214358,0.60403574,"extracellular matrix disassembly"),
+c("GO:0043248","proteasome assembly",0.04973352708162835,1.4981639361866723,0.9374020888050502,0.54675265,"extracellular matrix disassembly"),
+c("GO:0044091","membrane biogenesis",0.10454934838678319,1.5442236560521667,0.949334243875476,0.22367254,"extracellular matrix disassembly"),
+c("GO:0048284","organelle fusion",0.3097784030987896,1.320994228284458,0.943607974802892,0.40238582,"extracellular matrix disassembly"),
+c("GO:0051017","actin filament bundle assembly",0.08024701034412013,1.4429564774447312,0.9352377159215216,0.46482224,"extracellular matrix disassembly"),
+c("GO:0071763","nuclear membrane organization",0.029510334014686106,1.7590646010269657,0.9482951810639231,0.47749703,"extracellular matrix disassembly"),
+c("GO:0090148","membrane fission",0.005203066491689833,2.065254071426088,0.9590205542304486,0.19280738,"extracellular matrix disassembly"),
+c("GO:0097352","autophagosome maturation",0.04407201891895116,1.5758069882254384,0.910812434922487,0.55419042,"extracellular matrix disassembly"),
+c("GO:0097494","regulation of vesicle size",0.0013358891702964894,1.6955293132163276,0.8813200772879058,0.16738446,"extracellular matrix disassembly"),
+c("GO:0032506","cytokinetic process",0.18731778792133377,2.238255234997638,0.9635482300786542,0.00812187,"cytokinetic process"),
+c("GO:0000082","G1/S transition of mitotic cell cycle",0.054207030484004964,1.3715574864256888,0.9604135844414854,0.55434836,"cytokinetic process"),
+c("GO:0032964","collagen biosynthetic process",0.001030261389638252,1.817294935348519,0.9842356304523211,0.02573606,"collagen biosynthetic process"),
+c("GO:0033631","cell-cell adhesion mediated by integrin",0.00197425687344555,1.7040342358157448,0.9953023647191284,0.0060124,"cell-cell adhesion mediated by integrin"),
+c("GO:0045834","positive regulation of lipid metabolic process",0.03258140026226807,3.325199462720468,0.7999574915689306,0,"positive regulation of lipid metabolic process"),
+c("GO:0001558","regulation of cell growth",0.15345225803226778,2.09206232246444,0.8708171959540641,0.4993872,"positive regulation of lipid metabolic process"),
+c("GO:0001562","response to protozoan",0.004347801653880087,1.7590646010269657,0.9112850671098113,0.52099086,"positive regulation of lipid metabolic process"),
+c("GO:0001961","positive regulation of cytokine-mediated signaling pathway",0.00998466241489129,2.6304744933938107,0.7931102240173762,0.54699865,"positive regulation of lipid metabolic process"),
+c("GO:0002221","pattern recognition receptor signaling pathway",0.05462110683199355,2.7029583650443545,0.6210937970463054,0.37320022,"positive regulation of lipid metabolic process"),
+c("GO:0002366","leukocyte activation involved in immune response",0.03532712080785901,1.972320250040498,0.8110126235358255,0.59766659,"positive regulation of lipid metabolic process"),
+c("GO:0002407","dendritic cell chemotaxis",0.0007024509474806264,1.927496513157693,0.848413293376034,0.69686457,"positive regulation of lipid metabolic process"),
+c("GO:0002478","antigen processing and presentation of exogenous peptide antigen",0.0070984516798042255,2.0409874820630987,0.9115944291088852,0.54146449,"positive regulation of lipid metabolic process"),
+c("GO:0006289","nucleotide-excision repair",0.3388795902458204,1.793264876718993,0.8632792484530895,0.25960727,"positive regulation of lipid metabolic process"),
+c("GO:0006935","chemotaxis",0.49931938665039544,2.1375106542740125,0.8755860916335876,0.46320288,"positive regulation of lipid metabolic process"),
+c("GO:0008625","extrinsic apoptotic signaling pathway via death domain receptors",0.012831437307312777,2.169574302506937,0.8327055251628358,0.43187413,"positive regulation of lipid metabolic process"),
+c("GO:0009266","response to temperature stimulus",0.4441067421784182,2.0766607890627644,0.9186410790912369,0.22856956,"positive regulation of lipid metabolic process"),
+c("GO:0009743","response to carbohydrate",0.08030616410811849,2.2609639328045468,0.8935499527261859,0.17358146,"positive regulation of lipid metabolic process"),
+c("GO:0009746","response to hexose",0.07161056080035831,1.6244168156812895,0.8880021563687636,0.61685859,"positive regulation of lipid metabolic process"),
+c("GO:0010310","regulation of hydrogen peroxide metabolic process",0.0011042035946362127,1.4773120691693287,0.8930808037269167,0.16277194,"positive regulation of lipid metabolic process"),
+c("GO:0010712","regulation of collagen metabolic process",0.002528823410930255,2.238255234997638,0.8961828782239413,0.17001784,"positive regulation of lipid metabolic process"),
+c("GO:0010718","positive regulation of epithelial to mesenchymal transition",0.005757633029174538,2.143862732767319,0.8103382630537909,0.32600594,"positive regulation of lipid metabolic process"),
+c("GO:0010761","fibroblast migration",0.005037928900527721,1.6271927556038714,0.974925908653033,0.54593293,"positive regulation of lipid metabolic process"),
+c("GO:0010763","positive regulation of fibroblast migration",0.0010869504134700218,1.7230205680428503,0.8540788423138383,0.29807499,"positive regulation of lipid metabolic process"),
+c("GO:0010952","positive regulation of peptidase activity",0.0007221688688134159,2.7230536189890193,0.7990179954093004,0.34719373,"positive regulation of lipid metabolic process"),
+c("GO:0014823","response to activity",0.004404490677711858,1.6911251181959044,0.9442495215057364,0.14763285,"positive regulation of lipid metabolic process"),
+c("GO:0016239","positive regulation of macroautophagy",0.03119621628863961,2.380349751621189,0.7979186247857489,0.52758822,"positive regulation of lipid metabolic process"),
+c("GO:0031669","cellular response to nutrient levels",0.3309948864528712,2.066037374363136,0.8828675344043506,0.65484024,"positive regulation of lipid metabolic process"),
+c("GO:0031952","regulation of protein autophosphorylation",0.010083252021555238,1.5546269994317277,0.8661911058425007,0.43753236,"positive regulation of lipid metabolic process"),
+c("GO:0032642","regulation of chemokine production",0.010692042842705113,1.7967256242404652,0.848524340637958,0.6831524,"positive regulation of lipid metabolic process"),
+c("GO:0032653","regulation of interleukin-10 production",0.005348486161519155,1.459208729046746,0.8537124884597372,0.65835081,"positive regulation of lipid metabolic process"),
+c("GO:0032732","positive regulation of interleukin-1 production",0.009671640413733256,1.8212729445779754,0.7867649872404701,0.5608942,"positive regulation of lipid metabolic process"),
+c("GO:0032781","positive regulation of ATP-dependent activity",0.0002464740166598689,1.5546269994317277,0.8927235056655258,0.66233173,"positive regulation of lipid metabolic process"),
+c("GO:0032908","regulation of transforming growth factor beta1 production",0.0016439816911213256,1.4778723951837405,0.861789191373104,0.6200157,"positive regulation of lipid metabolic process"),
+c("GO:0032965","regulation of collagen biosynthetic process",0.0020629875194431027,1.374937999212359,0.8957567737762836,0.16817835,"positive regulation of lipid metabolic process"),
+c("GO:0032968","positive regulation of transcription elongation by RNA polymerase II",0.05595946074245663,1.6925866998572343,0.7968953801600936,0.48045899,"positive regulation of lipid metabolic process"),
+c("GO:0033120","positive regulation of RNA splicing",0.03716088749180844,1.4981639361866723,0.7916740109158944,0.62971114,"positive regulation of lipid metabolic process"),
+c("GO:0034340","response to type I interferon",0.01156456086168105,2.1013248309576853,0.8161496156083053,0.5574061,"positive regulation of lipid metabolic process"),
+c("GO:0035456","response to interferon-beta",0.006477337157821355,1.3100563361309268,0.903276637396829,0.61462369,"positive regulation of lipid metabolic process"),
+c("GO:0036314","response to sterol",0.007359714137463686,1.4773120691693287,0.9023629930203818,0.68201451,"positive regulation of lipid metabolic process"),
+c("GO:0038061","non-canonical NF-kappaB signal transduction",0.005967135943335426,1.784075891471505,0.841518405405116,0.23247099,"positive regulation of lipid metabolic process"),
+c("GO:0042129","regulation of T cell proliferation",0.04961275481346501,2.3389069089338084,0.7900266013997005,0.67491826,"positive regulation of lipid metabolic process"),
+c("GO:0042832","defense response to protozoan",0.004143228220052396,1.5416919925687298,0.9041781349449919,0.51955159,"positive regulation of lipid metabolic process"),
+c("GO:0043491","phosphatidylinositol 3-kinase/protein kinase B signal transduction",0.012518415306154744,1.7540821221879368,0.8353306845970081,0.51222907,"positive regulation of lipid metabolic process"),
+c("GO:0044088","regulation of vacuole organization",0.026914962619257684,1.8156000416664926,0.8815542846979814,0.55103004,"positive regulation of lipid metabolic process"),
+c("GO:0044790","suppression of viral release by host",0.0014862383204590096,1.4773120691693287,0.9083011664681285,0.49071404,"positive regulation of lipid metabolic process"),
+c("GO:0044819","mitotic G1/S transition checkpoint signaling",0.007061480577305245,1.391891978073958,0.7797073671640268,0.51745661,"positive regulation of lipid metabolic process"),
+c("GO:0045948","positive regulation of translational initiation",0.018746813707149628,1.5592215878473399,0.7937330254470242,0.58216004,"positive regulation of lipid metabolic process"),
+c("GO:0048009","insulin-like growth factor receptor signaling pathway",0.008350539684436359,2.526605883992283,0.8423313221596221,0.11026451,"positive regulation of lipid metabolic process"),
+c("GO:0048713","regulation of oligodendrocyte differentiation",0.005175954349857247,1.352576311795858,0.8909540765655793,0.5528477,"positive regulation of lipid metabolic process"),
+c("GO:0050686","negative regulation of mRNA processing",0.016203201855219784,1.4981639361866723,0.8373961472059285,0.53141389,"positive regulation of lipid metabolic process"),
+c("GO:0050687","negative regulation of defense response to virus",0.0015798984467897596,1.3470576628100672,0.8236450298905623,0.67593984,"positive regulation of lipid metabolic process"),
+c("GO:0050856","regulation of T cell receptor signaling pathway",0.010184306368385784,1.9366447954966977,0.7990392873918069,0.67162042,"positive regulation of lipid metabolic process"),
+c("GO:0051044","positive regulation of membrane protein ectodomain proteolysis",0.0038326709590609616,1.4773120691693287,0.8034754940445554,0.62300351,"positive regulation of lipid metabolic process"),
+c("GO:0051099","positive regulation of binding",0.0005890728998170868,2.091326988389676,0.8887326668316307,0.68649722,"positive regulation of lipid metabolic process"),
+c("GO:0051896","regulation of phosphatidylinositol 3-kinase/protein kinase B signal transduction",0.06001395831651148,1.3162716990919086,0.8329157113762009,0.58632428,"positive regulation of lipid metabolic process"),
+c("GO:0051984","positive regulation of chromosome segregation",0.00471997741903649,2.6195855921907656,0.8182702104201135,0.32240485,"positive regulation of lipid metabolic process"),
+c("GO:0051987","positive regulation of attachment of spindle microtubules to kinetochore",0.0029083933965864533,1.8280035488413093,0.8225294215692638,0.64670927,"positive regulation of lipid metabolic process"),
+c("GO:0051988","regulation of attachment of spindle microtubules to kinetochore",0.007004791553473475,2.169574302506937,0.8794263579997591,0.5067815,"positive regulation of lipid metabolic process"),
+c("GO:0060337","type I interferon-mediated signaling pathway",0.0090234137499178,1.6271927556038714,0.7296452917584159,0.64661806,"positive regulation of lipid metabolic process"),
+c("GO:0070129","regulation of mitochondrial translation",0.01671586780987231,1.3394901726987773,0.8626707428834388,0.49862334,"positive regulation of lipid metabolic process"),
+c("GO:0070371","ERK1 and ERK2 cascade",0.004288647889881719,1.352335621957168,0.8441308706906188,0.48449325,"positive regulation of lipid metabolic process"),
+c("GO:0070670","response to interleukin-4",0.0027605089865905316,1.9963499362653816,0.9073300769019356,0.58782705,"positive regulation of lipid metabolic process"),
+c("GO:0070723","response to cholesterol",0.0017894013609506482,1.9468634494963404,0.9090164526212441,0.49083141,"positive regulation of lipid metabolic process"),
+c("GO:0071216","cellular response to biotic stimulus",0.06398218998473537,1.9898884339994254,0.9075593577469228,0.20219234,"positive regulation of lipid metabolic process"),
+c("GO:0071218","cellular response to misfolded protein",0.026015332458449166,1.3135479338906513,0.884022622076892,0.5126972,"positive regulation of lipid metabolic process"),
+c("GO:0071222","cellular response to lipopolysaccharide",0.0511334994962564,1.9110001879353449,0.8570727753521565,0.62990817,"positive regulation of lipid metabolic process"),
+c("GO:0071243","cellular response to arsenic-containing substance",0.0016612348722875165,1.9474002359465628,0.915939745040702,0.31744814,"positive regulation of lipid metabolic process"),
+c("GO:0071360","cellular response to exogenous dsRNA",0.0034506362332381644,1.7040342358157448,0.8970332906423732,0.57424346,"positive regulation of lipid metabolic process"),
+c("GO:0072537","fibroblast activation",0.000404217387322185,1.7230205680428503,0.937503572052381,0.63167348,"positive regulation of lipid metabolic process"),
+c("GO:0090224","regulation of spindle organization",0.027760368496401032,1.4981639361866723,0.8567869782579645,0.56184693,"positive regulation of lipid metabolic process"),
+c("GO:0090235","regulation of metaphase plate congression",0.00302670092458319,1.7590646010269657,0.8821590261101353,0.10419429,"positive regulation of lipid metabolic process"),
+c("GO:0090312","positive regulation of protein deacetylation",0.0005200601751523234,1.4981639361866723,0.8340893609034191,0.53601448,"positive regulation of lipid metabolic process"),
+c("GO:0090649","response to oxygen-glucose deprivation",0.00017006707149530955,2.0393802655035924,0.9268618366782605,0.4788274,"positive regulation of lipid metabolic process"),
+c("GO:0098760","response to interleukin-7",0.0012101874217999564,2.0393802655035924,0.9109443232743473,0.56405001,"positive regulation of lipid metabolic process"),
+c("GO:0098761","cellular response to interleukin-7",0.0010894151536366206,1.7590646010269657,0.9019213275286138,0.56115619,"positive regulation of lipid metabolic process"),
+c("GO:1900034","regulation of cellular response to heat",0.001885526227447997,1.4773120691693287,0.851868898809036,0.56597767,"positive regulation of lipid metabolic process"),
+c("GO:1901185","negative regulation of ERBB signaling pathway",0.00505764682186051,1.5836470042308208,0.8285157585441704,0.41438034,"positive regulation of lipid metabolic process"),
+c("GO:1901222","regulation of non-canonical NF-kappaB signal transduction",0.031072979280309675,2.263703516501152,0.8389352076646682,0.46263726,"positive regulation of lipid metabolic process"),
+c("GO:1901224","positive regulation of non-canonical NF-kappaB signal transduction",0.00872518018975936,2.018145165395056,0.7923373011864063,0.54262386,"positive regulation of lipid metabolic process"),
+c("GO:1902253","regulation of intrinsic apoptotic signaling pathway by p53 class mediator",0.004071750755221035,1.8020802725087135,0.8466340739815112,0.49957863,"positive regulation of lipid metabolic process"),
+c("GO:1902459","positive regulation of stem cell population maintenance",0.0009785018461396797,1.422249940685759,0.8321062109022059,0.52438698,"positive regulation of lipid metabolic process"),
+c("GO:1903038","negative regulation of leukocyte cell-cell adhesion",0.04069778963087756,1.5145249280884192,0.8467272122324784,0.12129273,"positive regulation of lipid metabolic process"),
+c("GO:1903053","regulation of extracellular matrix organization",0.00588579951783767,2.328608768561058,0.8921489533671819,0.10809401,"positive regulation of lipid metabolic process"),
+c("GO:1903055","positive regulation of extracellular matrix organization",0.0032731749412430594,1.5416919925687298,0.8336722921068472,0.40363775,"positive regulation of lipid metabolic process"),
+c("GO:1903532","positive regulation of secretion by cell",0.07062712947388544,1.7236187430924976,0.7812050936812864,0.52893089,"positive regulation of lipid metabolic process"),
+c("GO:1904019","epithelial cell apoptotic process",0.004902368191364793,1.404805872200707,0.9879998062941104,0.58316486,"positive regulation of lipid metabolic process"),
+c("GO:1904035","regulation of epithelial cell apoptotic process",0.016575377620376183,1.65453426365673,0.8905108432910883,0.53907902,"positive regulation of lipid metabolic process"),
+c("GO:1905476","negative regulation of protein localization to membrane",0.003095713649247954,1.4981639361866723,0.8481710018578967,0.52960697,"positive regulation of lipid metabolic process"),
+c("GO:1905517","macrophage migration",0.007593864453290561,2.1689173377795887,0.9047344207002553,0.54361351,"positive regulation of lipid metabolic process"),
+c("GO:2000232","regulation of rRNA processing",0.0076480887369557325,1.4773120691693287,0.8816783831523501,0.20935831,"positive regulation of lipid metabolic process"),
+c("GO:2000234","positive regulation of rRNA processing",0.006615362607150882,2.261919076222245,0.819701596548897,0.39075622,"positive regulation of lipid metabolic process"),
+c("GO:2000622","regulation of nuclear-transcribed mRNA catabolic process, nonsense-mediated decay",0.0012545527447987328,2.414590599236119,0.8726684339551104,0.17515585,"positive regulation of lipid metabolic process"),
+c("GO:2000628","regulation of miRNA metabolic process",0.01652608281704421,2.169574302506937,0.8772511786481173,0.20213652,"positive regulation of lipid metabolic process"),
+c("GO:2000630","positive regulation of miRNA metabolic process",0.014371899911436956,2.0730308002213147,0.8017873829526156,0.42491886,"positive regulation of lipid metabolic process"),
+c("GO:2000765","regulation of cytoplasmic translation",0.027225519880249117,2.598935133098171,0.8590486784499668,0.37999322,"positive regulation of lipid metabolic process"),
+c("GO:2000779","regulation of double-strand break repair",0.03938408312208046,1.4718110568728615,0.8041475846268135,0.6780208,"positive regulation of lipid metabolic process"),
+c("GO:2000785","regulation of autophagosome assembly",0.010677254401705522,1.4981639361866723,0.8857293119660961,0.51842298,"positive regulation of lipid metabolic process"),
+c("GO:0046464","acylglycerol catabolic process",0.09181157120580116,2.8284537355070056,0.931712189344669,0.06097131,"acylglycerol catabolic process"),
+c("GO:0006692","prostanoid metabolic process",0.07448937731494559,1.7219585856122546,0.9396464960270744,0.39718231,"acylglycerol catabolic process"),
+c("GO:0009313","oligosaccharide catabolic process",0.1295319547154275,1.4773120691693287,0.9643575256302668,0.32021948,"acylglycerol catabolic process"),
+c("GO:0016101","diterpenoid metabolic process",0.11783183314458352,1.6034267102307838,0.9502555391341703,0.41044215,"acylglycerol catabolic process"),
+c("GO:0046470","phosphatidylcholine metabolic process",0.07026974214972863,1.3228683944670385,0.9282713021347796,0.59716054,"acylglycerol catabolic process"),
+c("GO:0046479","glycosphingolipid catabolic process",0.06625714515850596,1.4778723951837405,0.9225614273921835,0.63201512,"acylglycerol catabolic process"),
+c("GO:0046503","glycerolipid catabolic process",0.1769338375994535,1.9493222181327827,0.9319753664520701,0.67858452,"acylglycerol catabolic process"),
+c("GO:0097267","omega-hydroxylase P450 pathway",0.00021689713466068464,1.5442236560521667,0.9538990197221111,0.63758102,"acylglycerol catabolic process"),
+c("GO:0048732","gland development",0.07372284312313339,2.1931941431548094,0.9662555726644605,-0,"gland development"),
+c("GO:0001837","epithelial to mesenchymal transition",0.010975487961863963,1.3413812831645837,0.961763861270856,0.53912941,"gland development"),
+c("GO:0001885","endothelial cell development",0.013531423514626804,1.3242712202013422,0.9631124248251562,0.54928992,"gland development"),
+c("GO:0021782","glial cell development",0.02333369515718979,1.9107177531433417,0.919903741575267,0.41175729,"gland development"),
+c("GO:0042552","myelination",0.03391235995223136,1.3428541790637878,0.9268373635526086,0.5225736,"gland development"),
+c("GO:0060947","cardiac vascular smooth muscle cell differentiation",0.0005249896554855208,1.5442236560521667,0.9372681484185034,0.45451492,"gland development"),
+c("GO:0060976","coronary vasculature development",0.003938654786224705,1.3127481928134033,0.9359934523025987,0.57769448,"gland development"),
+c("GO:0072574","hepatocyte proliferation",0.0005767491989840933,1.3135479338906513,0.9350520028884381,0.45673207,"gland development"),
+c("GO:0050665","hydrogen peroxide biosynthetic process",0.0007320278294798107,1.4773120691693287,0.9781976211482584,0.07540129,"hydrogen peroxide biosynthetic process"),
+c("GO:0051656","establishment of organelle localization",0.5294631588878974,2.808585597488287,0.9771120366522835,-0,"establishment of organelle localization"),
+c("GO:0006606","protein import into nucleus",0.2499369765939401,2.0899309826979606,0.9550398769363847,0.23871699,"establishment of organelle localization"),
+c("GO:0006890","retrograde vesicle-mediated transport, Golgi to endoplasmic reticulum",0.1396694310206479,1.3470576628100672,0.9706580055046716,0.56169915,"establishment of organelle localization"),
+c("GO:0015711","organic anion transport",1.9925107391193801,1.3986182654244694,0.9730010889539603,0.46471691,"establishment of organelle localization"),
+c("GO:0015718","monocarboxylic acid transport",0.39675661883789076,1.424596724527541,0.9746656136114176,0.48745314,"establishment of organelle localization"),
+c("GO:0033572","transferrin transport",0.0028196627505889,1.5442236560521667,0.9695174187539989,0.40907911,"establishment of organelle localization"),
+c("GO:0061462","protein localization to lysosome",0.047707510664684226,1.7275421791235792,0.96137085891529,0.60374691,"establishment of organelle localization"),
+c("GO:0071692","protein localization to extracellular region",0.43191860205458765,1.7967256242404652,0.9611920501866016,0.53513459,"establishment of organelle localization"),
+c("GO:0071985","multivesicular body sorting pathway",0.15133258148899292,1.3879194644991915,0.9705003591322198,0.56528468,"establishment of organelle localization"),
+c("GO:0072665","protein localization to vacuole",0.21067613048018954,1.960954255271892,0.9591944017607712,0.67752356,"establishment of organelle localization"),
+c("GO:0098876","vesicle-mediated transport to the plasma membrane",0.2309560125709636,1.4898289925500945,0.9591339400797603,0.44183298,"establishment of organelle localization"),
+c("GO:1902001","fatty acid transmembrane transport",0.02533259943230133,1.4778723951837405,0.9680746643511836,0.57499831,"establishment of organelle localization"),
+c("GO:0051851","modulation by host of symbiont process",0.01205011467450099,2.5886931660679298,0.9717130123405848,-0,"modulation by host of symbiont process"),
+c("GO:0060768","regulation of epithelial cell proliferation involved in prostate gland development",0.0010204024289718573,1.5442236560521667,0.9083023884457692,0.09839117,"regulation of epithelial cell proliferation involved in prostate gland development"),
+c("GO:0070328","triglyceride homeostasis",0.02314391016436169,2.6304744933938107,0.9719815985750337,-0,"triglyceride homeostasis"),
+c("GO:0032469","endoplasmic reticulum calcium ion homeostasis",0.016950018125699188,1.5158050305125945,0.9729291758001837,0.47552777,"triglyceride homeostasis"),
+c("GO:0033500","carbohydrate homeostasis",0.08834861127173001,2.1555053037144734,0.9716078454814074,0.57518475,"triglyceride homeostasis"),
+c("GO:0042593","glucose homeostasis",0.08753524701675244,2.202968926575182,0.9691508931700654,0.52519189,"triglyceride homeostasis"),
+c("GO:0048388","endosomal lumen acidification",0.0003425988831572178,1.4778723951837405,0.8629773082819506,0.64802853,"triglyceride homeostasis"),
+c("GO:0051452","intracellular pH reduction",0.08432122583950775,1.510163772702914,0.8647723500520536,0.57328405,"triglyceride homeostasis"),
+c("GO:0060586","multicellular organismal-level iron ion homeostasis",0.00353443739890252,1.7118567892122303,0.9256627880926154,0.43467336,"triglyceride homeostasis"),
+c("GO:0140962","multicellular organismal-level chemical homeostasis",0.009415307436406992,1.374937999212359,0.9227677700296557,0.68905594,"triglyceride homeostasis"),
+c("GO:0070989","oxidative demethylation",0.01750211992301729,1.4778723951837405,0.9897682336734537,0.03048624,"oxidative demethylation"),
+c("GO:0072350","tricarboxylic acid metabolic process",0.12362397253609045,3.0557848961767107,0.9620172303508957,-0,"tricarboxylic acid metabolic process"),
+c("GO:0006054","N-acetylneuraminate metabolic process",0.07429219810161769,1.4981639361866723,0.947673047642059,0.35136653,"tricarboxylic acid metabolic process"),
+c("GO:0006085","acetyl-CoA biosynthetic process",0.1522864359334666,1.4773120691693287,0.9229180116885793,0.57982673,"tricarboxylic acid metabolic process"),
+c("GO:0006534","cysteine metabolic process",0.26615003740982623,2.129252073122102,0.9467377266849795,0.35422586,"tricarboxylic acid metabolic process"),
+c("GO:0009147","pyrimidine nucleoside triphosphate metabolic process",0.27298476189180443,1.3394901726987773,0.9377069429804796,0.54303072,"tricarboxylic acid metabolic process"),
+c("GO:0009185","ribonucleoside diphosphate metabolic process",0.5678613459433384,1.5592215878473399,0.9342107119057211,0.53210074,"tricarboxylic acid metabolic process"),
+c("GO:0046049","UMP metabolic process",0.21744184223750296,1.7230205680428503,0.9255284141464734,0.24077431,"tricarboxylic acid metabolic process"),
+c("GO:0046165","alcohol biosynthetic process",0.6715554294923118,1.651862401746171,0.9567170296384298,0.2773706,"tricarboxylic acid metabolic process"),
+c("GO:1990845","adaptive thermogenesis",0.005651649202010794,2.2848815971788117,0.9904235828990524,0.02839474,"adaptive thermogenesis"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/Figures viral sex combined/M_HCV_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+
+```

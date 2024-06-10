@@ -1,0 +1,187 @@
+---
+title: "2024_2_8_Tree_map_significant_HBV_HCV"
+output: html_document
+date: "2024-02-08"
+---
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0002396","MHC protein complex assembly",0.0016863736221629008,4.642065152999546,0.9649047670850756,0.00472459,"MHC protein complex assembly"),
+c("GO:0010257","NADH dehydrogenase complex assembly",0.044065242103380885,3.2419143552340044,0.9585402398083357,0.56601776,"MHC protein complex assembly"),
+c("GO:0017004","cytochrome complex assembly",0.23544370186351268,1.424823197380928,0.9544424416839163,0.63916729,"MHC protein complex assembly"),
+c("GO:0022411","cellular component disassembly",0.2922515422834736,1.6452656863864377,0.9678012673286162,0.33574111,"MHC protein complex assembly"),
+c("GO:0033108","mitochondrial respiratory chain complex assembly",0.09921997070832217,4.005682847330363,0.9535086580581669,0.46286941,"MHC protein complex assembly"),
+c("GO:0048194","Golgi vesicle budding",0.0014701718757317596,1.6098984608401874,0.9674488115357387,0.33354451,"MHC protein complex assembly"),
+c("GO:0061572","actin filament bundle organization",0.027733694796043918,1.6736251157779045,0.965854785277879,0.24550645,"MHC protein complex assembly"),
+c("GO:0007159","leukocyte cell-cell adhesion",0.006130151056501432,7.3223930472795065,0.9831597732414329,-0,"leukocyte cell-cell adhesion"),
+c("GO:0033627","cell adhesion mediated by integrin",0.004510301048625037,1.546246971402776,0.9846849667106204,0.49915346,"leukocyte cell-cell adhesion"),
+c("GO:0033631","cell-cell adhesion mediated by integrin",0.0009645924071543221,1.3360132220584242,0.9842609911372013,0.54747398,"leukocyte cell-cell adhesion"),
+c("GO:0009199","ribonucleoside triphosphate metabolic process",0.5924892444620421,1.5864745620409078,0.9385359030534998,0.07514611,"ribonucleoside triphosphate metabolic process"),
+c("GO:0006383","transcription by RNA polymerase III",0.08139164207953882,1.4190752523005465,0.9694496468099234,0.1799393,"ribonucleoside triphosphate metabolic process"),
+c("GO:0009141","nucleoside triphosphate metabolic process",0.762872851553353,1.6103109678023344,0.9512250773256168,0.63608443,"ribonucleoside triphosphate metabolic process"),
+c("GO:0042776","proton motive force-driven mitochondrial ATP synthesis",0.003998069218618948,1.4775676086788436,0.9146664974024724,0.63433806,"ribonucleoside triphosphate metabolic process"),
+c("GO:0009615","response to virus",0.1725522769170509,6.4089353929735005,0.8903732107960386,-0,"response to virus"),
+c("GO:0001666","response to hypoxia",0.03421642100826383,1.3184307951062435,0.9201690045578279,0.228341,"response to virus"),
+c("GO:0006935","chemotaxis",0.5617320513966766,3.02205564636531,0.8801891497189378,0.66971649,"response to virus"),
+c("GO:0007249","I-kappaB kinase/NF-kappaB signaling",0.027850111121045303,1.8094133757553736,0.7963512966391199,0.3024098,"response to virus"),
+c("GO:0030522","intracellular receptor signaling pathway",0.08616471140459556,1.834152651965473,0.7849340797092466,0.24456315,"response to virus"),
+c("GO:0038127","ERBB signaling pathway",0.013790345241592481,1.4054647968202199,0.7932382999877403,0.28907986,"response to virus"),
+c("GO:0042770","signal transduction in response to DNA damage",0.06882200516010371,1.4937929877218685,0.7798660073013934,0.40698001,"response to virus"),
+c("GO:0044650","adhesion of symbiont to host cell",0.013550860230161062,1.6098984608401874,0.9718241239392421,0.59318401,"response to virus"),
+c("GO:0051403","stress-activated MAPK cascade",0.01492457286517739,1.3735005333977512,0.7979733548095014,0.41646607,"response to virus"),
+c("GO:0051775","response to redox state",0.013234873062300163,1.678420706251037,0.9343037994364628,0.21415805,"response to virus"),
+c("GO:0070482","response to oxygen levels",0.038207837865454126,1.3472518890757297,0.9267817856975192,0.65312022,"response to virus"),
+c("GO:0071356","cellular response to tumor necrosis factor",0.027773608964615823,2.5738582901161813,0.8913056648432299,0.22506726,"response to virus"),
+c("GO:0071364","cellular response to epidermal growth factor stimulus",0.004210944784335765,1.3264709430016095,0.9293322562302948,0.19923805,"response to virus"),
+c("GO:1901653","cellular response to peptide",0.044614061921244556,1.6169963742932176,0.8877266353071935,0.61404037,"response to virus"),
+c("GO:0016032","viral process",0.15924422787903558,3.4323009397953617,1,-0,"viral process"),
+c("GO:0016049","cell growth",0.03260987572324474,1.3689924796497184,0.9952374899765267,0.00783419,"cell growth"),
+c("GO:0019058","viral life cycle",0.13056589776012328,3.7085467856044025,0.9861421081979382,-0,"viral life cycle"),
+c("GO:0019882","antigen processing and presentation",0.027101720460322123,5.694648630553377,0.7476602466906093,-0,"antigen processing and presentation"),
+c("GO:0001776","leukocyte homeostasis",0.01178133209014003,1.9277677172277734,0.7340948350320372,0.60267411,"antigen processing and presentation"),
+c("GO:0002456","T cell mediated immunity",0.003582296629328292,2.7804207125927576,0.7261378434614902,0.56378624,"antigen processing and presentation"),
+c("GO:0002503","peptide antigen assembly with MHC class II protein complex",0.0010610516478697543,5.694648630553377,0.7308141798558949,0.52890632,"antigen processing and presentation"),
+c("GO:0042098","T cell proliferation",0.009313306000110695,5.276544327964814,0.7015015232184143,0.59457617,"antigen processing and presentation"),
+c("GO:0050900","leukocyte migration",0.025501827536731678,3.2419143552340044,0.7340267538498152,0.63090187,"antigen processing and presentation"),
+c("GO:0036344","platelet morphogenesis",0.002717489643603728,2.3228435420392106,0.9352773782220608,0.00483612,"platelet morphogenesis"),
+c("GO:0001701","in utero embryonic development",0.04501985596839224,1.3349129315521164,0.8818898375326083,0.6585556,"platelet morphogenesis"),
+c("GO:0001885","endothelial cell development",0.006133477237215758,1.3040564133639545,0.9298169112684285,0.66076829,"platelet morphogenesis"),
+c("GO:0003158","endothelium development",0.012905581171581963,1.5788097875614944,0.9443547029963876,0.39121283,"platelet morphogenesis"),
+c("GO:0030220","platelet formation",0.002468026090029334,1.9142917079534678,0.9237169595994842,0.61410449,"platelet morphogenesis"),
+c("GO:0042692","muscle cell differentiation",0.040961915496915434,1.365361758347156,0.9325249453296081,0.50269551,"platelet morphogenesis"),
+c("GO:0098773","skin epidermis development",0.013680581278019747,1.3040564133639545,0.943208981918034,0.69046088,"platelet morphogenesis"),
+c("GO:1990403","embryonic brain development",0.0021819745485973626,1.3360132220584242,0.897261090030059,0.35848403,"platelet morphogenesis"),
+c("GO:0043161","proteasome-mediated ubiquitin-dependent protein catabolic process",0.3014484319585829,3.0352996973156032,0.979878319823676,0.02873967,"proteasome-mediated ubiquitin-dependent protein catabolic process"),
+c("GO:0000209","protein polyubiquitination",0.10886589477986537,1.454915631020252,0.9840271527647414,0.21615196,"proteasome-mediated ubiquitin-dependent protein catabolic process"),
+c("GO:0016236","macroautophagy",0.08570569846601868,1.5552462115470829,0.983026515523506,0.40939737,"proteasome-mediated ubiquitin-dependent protein catabolic process"),
+c("GO:0045333","cellular respiration",1.1686502677974617,3.2419143552340044,0.9322325035591694,0.00690875,"cellular respiration"),
+c("GO:0050863","regulation of T cell activation",0.048921465946295754,7.3223930472795065,0.5500433075745118,0,"regulation of T cell activation"),
+c("GO:0001819","positive regulation of cytokine production",0.06822661881223949,4.082494490447453,0.6464716430228502,0.69772415,"regulation of T cell activation"),
+c("GO:0001959","regulation of cytokine-mediated signaling pathway",0.019940453382379864,1.7384540396939099,0.7471066220145968,0.57820402,"regulation of T cell activation"),
+c("GO:0016241","regulation of macroautophagy",0.020469316115957578,1.3757166456405783,0.8536778379908713,0.21337083,"regulation of T cell activation"),
+c("GO:0022407","regulation of cell-cell adhesion",0.06214968664716727,6.4089353929735005,0.7679787868247935,0.16860225,"regulation of T cell activation"),
+c("GO:0043122","regulation of I-kappaB kinase/NF-kappaB signaling",0.04471052116195999,2.2558459350758557,0.7403462711886902,0.16498142,"regulation of T cell activation"),
+c("GO:0043123","positive regulation of I-kappaB kinase/NF-kappaB signaling",0.03431620642969359,1.7533784357555917,0.6721687632925001,0.69257715,"regulation of T cell activation"),
+c("GO:0043281","regulation of cysteine-type endopeptidase activity involved in apoptotic process",0.029789274477496925,1.9872431061206042,0.8528929265044424,0.14825311,"regulation of T cell activation"),
+c("GO:0043516","regulation of DNA damage response, signal transduction by p53 class mediator",0.007690129811519974,1.5537395430356207,0.7453897591900801,0.63230183,"regulation of T cell activation"),
+c("GO:0044818","mitotic G2/M transition checkpoint",0.022411805653123524,1.460560112328327,0.7416930075115872,0.42798059,"regulation of T cell activation"),
+c("GO:0045069","regulation of viral genome replication",0.00944302704796938,2.423773171182707,0.8487654655628554,0.13816902,"regulation of T cell activation"),
+c("GO:0050792","regulation of viral process",0.020865131620962284,3.0616454181753605,0.8662346014465293,0.14497383,"regulation of T cell activation"),
+c("GO:0051048","negative regulation of secretion",0.02026641909238374,2.9107075698217164,0.7902714716184894,0.1447121,"regulation of T cell activation"),
+c("GO:0051051","negative regulation of transport",0.06065955768714956,1.7904123410366586,0.7853048046709806,0.66804825,"regulation of T cell activation"),
+c("GO:0060759","regulation of response to cytokine stimulus",0.021204402053823457,1.4233407289981024,0.760167119676396,0.53068475,"regulation of T cell activation"),
+c("GO:0062208","positive regulation of pattern recognition receptor signaling pathway",0.00615343432150171,2.457675482632232,0.5540257515593738,0.67083142,"regulation of T cell activation"),
+c("GO:0070663","regulation of leukocyte proliferation",0.03447253692326687,5.239577516576788,0.8061402442995762,0.16223045,"regulation of T cell activation"),
+c("GO:0071706","tumor necrosis factor superfamily cytokine production",0.00020223178743097498,2.4821349594778646,0.9051783148000077,0.06247743,"tumor necrosis factor superfamily cytokine production"),
+c("GO:0008380","RNA splicing",0.7198287469292699,1.6396103967398805,0.9568207781344273,0.35187866,"tumor necrosis factor superfamily cytokine production"),
+c("GO:0032543","mitochondrial translation",0.07416385138731006,2.0259338833357052,0.9612617052144582,0.2957289,"tumor necrosis factor superfamily cytokine production"),
+c("GO:0140053","mitochondrial gene expression",0.08795419662890254,2.3088352834469648,0.978882439571077,0.20905924,"tumor necrosis factor superfamily cytokine production"),
+c("GO:0071887","leukocyte apoptotic process",0.005248713167205242,1.765337343280012,0.9957208499398916,0.00499892,"leukocyte apoptotic process"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HCV_sig_only_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0044282","small molecule catabolic process",1.5882113769217343,1.5110278698639148,1,-0,"small molecule catabolic process"),
+c("GO:0055088","lipid homeostasis",0.039757838078329694,1.5841623312511097,1,-0,"lipid homeostasis"),
+c("GO:0097193","intrinsic apoptotic signaling pathway",0.02495633389958234,2.5341447385036324,0.8116421754190682,0,"intrinsic apoptotic signaling pathway"),
+c("GO:0034976","response to endoplasmic reticulum stress",0.12409647627076069,1.5110278698639148,0.8794826768226511,0.24877049,"intrinsic apoptotic signaling pathway"),
+c("GO:2001243","negative regulation of intrinsic apoptotic signaling pathway",0.014372426866599399,1.5110278698639148,0.9275702403445409,0.14758208,"intrinsic apoptotic signaling pathway"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HBV_sig_only_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+
+
+```

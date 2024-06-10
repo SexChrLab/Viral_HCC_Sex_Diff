@@ -1,0 +1,446 @@
+---
+title: "2024_1_22_DEA_Tumor_TumorAdj"
+output: html_document
+date: "2024-01-22"
+---
+
+**Purpose:**
+
+* Identify tumor/tumor-adjacent differentially expressed genes with only library type as a covariate
+
+**Methods:**
+
+* Limma voom pipeline on all tumor-tumor-adjcent comparison
+
+* Only covariate is library type
+
+**Results:**
+
+## Load libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(ggrepel)
+library(UpSetR)
+library(edgeR)
+library(DESeq2)
+library(limma)
+library(ggplot2)
+library(dplyr)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+```
+
+## Read in data
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+
+## Create DEG list object
+```{r}
+dge <- DGEList(counts=tumorAdjacentExp, genes=genes)
+
+colnames(dge) <- colnames(tumorAdjacentExp)
+dge$samples$ID <- metadata$ID
+dge$samples$tumor <- factor(metadata$tumor)
+dge$samples$library_type <- metadata$libtype
+dge$samples$viral <- metadata$Virus_infection
+dge$samples$viral_tissue <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+dge$samples$gender_tussue <- metadata$gender_tissue
+dge$samples$gender_tissue_viral <- metadata$gender_tissue_viral
+```
+
+## Filtering by FPKM expression level
+```{r}
+# Keeping genes that have a mean FPKM of at least 0.5 in at least one of the
+# groups under investigation and at least 6 reads in at least 10 samples
+fpkm <- rpkm(dge, gene.length=dge$genes$length)
+
+M_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HBV")],1,mean,na.rm=TRUE)
+M_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HBV")],1,mean,na.rm=TRUE)
+M_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HCV")],1,mean,na.rm=TRUE)
+M_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HCV")],1,mean,na.rm=TRUE)
+
+F_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HBV")],1,mean,na.rm=TRUE)
+F_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HBV")],1,mean,na.rm=TRUE)
+F_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HCV")],1,mean,na.rm=TRUE)
+F_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HCV")],1,mean,na.rm=TRUE)
+
+keep <- (M_1_HBV_mean_fpkm > 0.5 | M_0_HBV_mean_fpkm > 0.5 | 
+           M_1_HCV_mean_fpkm > 0.5 | M_0_HCV_mean_fpkm > 0.5 |
+           F_1_HBV_mean_fpkm > 0.5 | F_0_HBV_mean_fpkm > 0.5 |
+           F_1_HCV_mean_fpkm > 0.5 | F_0_HCV_mean_fpkm > 0.5 )
+
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+keep <- rowSums(dge$counts > 6) >= 10
+dge <- dge[keep,,keep.lib.size=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+
+# N of genes retained after filtering
+dim(dge$genes)
+```
+
+## Create design matrix
+```{r}
+design <- model.matrix(~0+dge$samples$viral_tissue+dge$samples$library_type)
+colnames(design) <- c("HBV_0", "HBV_1", "HCV_0", "HCV_1", "library_type")
+head(design)
+```
+
+## Voom analysis
+```{r}
+v <- voomWithQualityWeights(dge, design, plot=TRUE)
+```
+
+# DEA
+```{r}
+# Block design for individual. This is used in tumor-normal comparisons with
+# paired samples.
+corfit <- duplicateCorrelation(v, design, block = v$targets$ID)
+# This should give a positive correlation value. It represents the
+# correlation between measurements made on the same person.
+corfit$consensus
+
+# Fitting the linear model with limma.
+# If using paired samples, the within-patient correlation and a block design
+# for patient is used to account for pairwise samples
+fit <- lmFit(v, design, block = v$targets$ID, correlation = corfit$consensus)
+
+# Contrast design for differential expression
+# Defining pairwise comparisons
+contrasts <- makeContrasts(HBV_v_HCV_adj = `HBV_0` - `HCV_0`,
+                           HBV_v_HCV_tumor = `HBV_1` - `HCV_1`,
+                           levels=colnames(design))
+head(contrasts)
+
+# Running contrast analysis
+vfit <- contrasts.fit(fit, contrasts = contrasts)
+
+
+# Computing differential expression based on the empirical Bayes moderation of
+# the standard errors towards a common value. Robust = should the estimation of
+# the empirical Bayes prior parameters be robustified against outlier sample
+# variances?
+veBayesFit <- eBayes(vfit, robust=TRUE)
+
+plotSA(veBayesFit, main = "Final model: Mean-variance trend")
+# Look at N of DEGs with adj. p <0.01 and log2FC>2
+summary(decideTests(veBayesFit, adjust.method = "BH", p.value = 0.05))
+
+vTopTable <- topTable(veBayesFit, n=Inf, p.value=1, lfc=0)
+
+All_tumor_adjacent <- topTable(veBayesFit, coef = 1, n=Inf)
+DEGs_tumor_adjacent <- topTable(veBayesFit, coef = 1, n=Inf, p.value=0.05, lfc=2)
+DEGs_tumor_adjacent_rel <- topTable(veBayesFit, coef = 1, n=Inf, p.value=0.05, lfc=1)
+
+All_tumor <- topTable(veBayesFit, coef = 2, n=Inf)
+DEGs_tumor <- topTable(veBayesFit, coef = 2, n=Inf, p.value=0.05, lfc=2)
+DEGs_tumor_rel <- topTable(veBayesFit, coef = 2, n=Inf, p.value=0.05, lfc=1)
+```
+
+## Violin plots
+```{r}
+All_tumor_adjacent$color <- NA
+## Autosomal non-significant
+All_tumor_adjacent[which(!(All_tumor_adjacent$GENEID %in% DEGs_tumor_adjacent$GENEID) & All_tumor_adjacent$chr != "chrX" & All_tumor_adjacent$chr != "chrY"), 14] <- 1
+## X-linked non-signifiant
+All_tumor_adjacent[which(!(All_tumor_adjacent$GENEID %in% DEGs_tumor_adjacent$GENEID) & All_tumor_adjacent$chr == "chrX"), 14] <- 2
+## Y-linked non-significant
+All_tumor_adjacent[which(!(All_tumor_adjacent$GENEID %in% DEGs_tumor_adjacent$GENEID) & All_tumor_adjacent$chr == "chrY"), 14] <- 3
+## Autosomal significant
+All_tumor_adjacent[which((All_tumor_adjacent$GENEID %in% DEGs_tumor_adjacent$GENEID) & All_tumor_adjacent$chr != "chrX" & All_tumor_adjacent$chr != "chrY"), 14] <- 4
+## X-linked signifiant
+All_tumor_adjacent[which((All_tumor_adjacent$GENEID %in% DEGs_tumor_adjacent$GENEID) & All_tumor_adjacent$chr == "chrX"), 14] <- 5
+## Y-linked significant
+All_tumor_adjacent[which((All_tumor_adjacent$GENEID %in% DEGs_tumor_adjacent$GENEID) & All_tumor_adjacent$chr == "chrY"), 14] <- 6
+
+All_tumor_adjacent$color <- as.factor(All_tumor_adjacent$color)
+
+p <- ggplot(data = All_tumor_adjacent, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-5, 5)) + ylim(c(0, 15)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(All_tumor_adjacent, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/Tumor_adjacent_HBV_v_HCV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+
+## Violin plots
+```{r}
+All_tumor$color <- NA
+## Autosomal non-significant
+All_tumor[which(!(All_tumor$GENEID %in% DEGs_tumor$GENEID) & All_tumor$chr != "chrX" & All_tumor$chr != "chrY"), 14] <- 1
+## X-linked non-signifiant
+All_tumor[which(!(All_tumor$GENEID %in% DEGs_tumor$GENEID) & All_tumor$chr == "chrX"), 14] <- 2
+## Y-linked non-significant
+All_tumor[which(!(All_tumor$GENEID %in% DEGs_tumor$GENEID) & All_tumor$chr == "chrY"), 14] <- 3
+## Autosomal significant
+All_tumor[which((All_tumor$GENEID %in% DEGs_tumor$GENEID) & All_tumor$chr != "chrX" & All_tumor$chr != "chrY"), 14] <- 4
+## X-linked signifiant
+All_tumor[which((All_tumor$GENEID %in% DEGs_tumor$GENEID) & All_tumor$chr == "chrX"), 14] <- 5
+## Y-linked significant
+All_tumor[which((All_tumor$GENEID %in% DEGs_tumor$GENEID) & All_tumor$chr == "chrY"), 14] <- 6
+
+All_tumor$color <- as.factor(All_tumor$color)
+
+p <- ggplot(data = All_tumor, aes(x = logFC, y = -log10(adj.P.Val), color=color )) +
+  geom_point(alpha = 0.5, size = 5) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  xlim(c(-5, 5)) + ylim(c(0, 15)) +
+  scale_color_manual(values = c("azure3", "pink", "seagreen2", "black", "mediumvioletred", "springgreen")) +
+  labs(x=expression(log[2](FC)),
+       y=expression(-log[10] ~ "(FDR-adjusted " ~ italic("p") ~ "-value)")) +
+  theme(axis.title.x=element_text(size=12), 
+        axis.text.x=element_text(size=10)) +
+  theme(axis.title.y=element_text(size=12),
+        axis.text.y=element_text(size=10))
+
+forLabel <- subset(All_tumor, adj.P.Val<=0.01 & abs(logFC)>=2)
+
+# Adding lines for significance thresholds
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/Tumor_HBV_v_HCV_volcano.pdf", width=12, height=12)
+p + geom_hline(yintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = 2, colour="#000000", linetype="dashed"
+) + geom_vline(xintercept = -2, colour="#000000", linetype="dashed"
+) + geom_text_repel(data=forLabel, max.iter=1000, box.padding = 0.25, force=1, aes(x = logFC, y = -log10(adj.P.Val), label=gene_name, color=color), size=9)
+dev.off()
+```
+## Upset plot
+
+```{r}
+upset_list <- list("Up HBV tumor"= DEGs_tumor_rel[which(DEGs_tumor_rel$logFC>0),5], 
+                   "Up HCV tumor"=DEGs_tumor_rel[which(DEGs_tumor_rel$logFC<0),5],
+                   "Up HBV tumor-adjacent"=DEGs_tumor_adjacent_rel[which( DEGs_tumor_adjacent_rel$logFC>0),5],
+                   "Up HCV tumor-adjacent"=DEGs_tumor_adjacent_rel[which( DEGs_tumor_adjacent_rel$logFC<0),5])
+upset(fromList(upset_list), order.by = "freq", sets=c("Up HBV tumor", "Up HCV tumor", "Up HBV tumor-adjacent", "Up HCV tumor-adjacent"), nsets=6, keep.order = TRUE)
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/DEG Figures/HBV_v_HCV_DEA_Upset.pdf", width=10, height=10)
+upset(fromList(upset_list), order.by = "freq", sets=c("Up HBV tumor", "Up HCV tumor", "Up HBV tumor-adjacent", "Up HCV tumor-adjacent"), nsets=6, keep.order = TRUE)
+dev.off()
+```
+## Pathway enrichment analysis
+```{r}
+DEGs_tumor_adjacent_up_HCV <- DEGs_tumor_adjacent_rel[which(DEGs_tumor_adjacent_rel$logFC<0),]
+DEGs_tumor_adjacent_up_HBV <- DEGs_tumor_adjacent_rel[which(DEGs_tumor_adjacent_rel$logFC>0),]
+DEGs_tumor_up_HCV <- DEGs_tumor_rel[which(DEGs_tumor_rel$logFC<0),]
+DEGs_tumor_up_HBV <- DEGs_tumor_rel[which(DEGs_tumor_rel$logFC>0),]
+
+DEGs_shared_tumor_adjacent_tumor_up_HCV <- DEGs_tumor_adjacent_up_HCV[which(DEGs_tumor_adjacent_up_HCV$gene_name %in% DEGs_tumor_up_HCV$gene_name),]
+print(length(unique(DEGs_shared_tumor_adjacent_tumor_up_HCV$GENEID)))
+ego <- enrichGO(gene          = DEGs_shared_tumor_adjacent_tumor_up_HCV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_up_HCV_shared_tumor_adjacent.csv")
+
+DEGs_shared_tumor_adjacent_tumor_up_HBV <- DEGs_tumor_adjacent_up_HBV[which(DEGs_tumor_adjacent_up_HBV$gene_name %in% DEGs_tumor_up_HBV$gene_name),]
+print(length(unique(DEGs_shared_tumor_adjacent_tumor_up_HBV$GENEID)))
+ego <- enrichGO(gene          = DEGs_shared_tumor_adjacent_tumor_up_HBV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_up_HBV_shared_tumor_adjacent.csv")
+
+DEGs_shared_tumor_adjacent_HCV_tumor_HBV <- DEGs_tumor_adjacent_up_HCV[which(DEGs_tumor_adjacent_up_HCV$gene_name %in% DEGs_tumor_up_HBV$gene_name),]
+print(length(unique(DEGs_shared_tumor_adjacent_HCV_tumor_HBV$GENEID)))
+ego <- enrichGO(gene          = DEGs_shared_tumor_adjacent_HCV_tumor_HBV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_shared_tumor_adjacent_HCV_tumor_HBV.csv")
+
+DEGs_shared_tumor_adjacent_HBV_tumor_HCV <- DEGs_tumor_adjacent_up_HBV[which(DEGs_tumor_adjacent_up_HBV$gene_name %in% DEGs_tumor_up_HCV$gene_name),]
+print(length(unique(DEGs_shared_tumor_adjacent_HBV_tumor_HCV$GENEID)))
+ego <- enrichGO(gene          = DEGs_shared_tumor_adjacent_HBV_tumor_HCV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_shared_tumor_adjacent_HBV_tumor_HCV.csv")
+
+DEGs_tumor_adjacent_only_HCV <- DEGs_tumor_adjacent_up_HCV[-which(DEGs_tumor_adjacent_up_HCV$gene_name %in% DEGs_tumor_up_HCV$gene_name | DEGs_tumor_adjacent_up_HCV$gene_name %in% DEGs_tumor_up_HBV$gene_name),]
+print(length(unique(DEGs_tumor_adjacent_only_HCV$GENEID)))
+ego <- enrichGO(gene          = DEGs_tumor_adjacent_only_HCV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_up_HCV_tumor_adjacent_only.csv")
+
+DEGs_tumor_adjacent_only_HBV <- DEGs_tumor_adjacent_up_HBV[-which(DEGs_tumor_adjacent_up_HBV$gene_name %in% DEGs_tumor_up_HCV$gene_name | DEGs_tumor_adjacent_up_HBV$gene_name %in% DEGs_tumor_up_HBV$gene_name),]
+print(length(unique(DEGs_tumor_adjacent_only_HBV$GENEID)))
+ego <- enrichGO(gene          = DEGs_tumor_adjacent_only_HBV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_up_HBV_tumor_adjacent_only.csv")
+
+DEGs_tumor_only_HCV <- DEGs_tumor_up_HCV[-which(DEGs_tumor_up_HCV$gene_name %in% DEGs_tumor_adjacent_up_HCV$gene_name | DEGs_tumor_up_HCV$gene_name %in% DEGs_tumor_adjacent_up_HBV$gene_name),]
+print(length(unique(DEGs_tumor_only_HCV$GENEID)))
+ego <- enrichGO(gene          = DEGs_tumor_only_HCV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_up_HCV_tumor_only.csv")
+
+DEGs_tumor_only_HBV <- DEGs_tumor_up_HBV[-which(DEGs_tumor_up_HBV$gene_name %in% DEGs_tumor_adjacent_up_HBV$gene_name | DEGs_tumor_up_HBV$gene_name %in% DEGs_tumor_adjacent_up_HCV$gene_name),]
+print(length(unique(DEGs_tumor_only_HBV$GENEID)))
+ego <- enrichGO(gene          = DEGs_tumor_only_HBV$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+head(ego)
+write.csv(ego, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/GO_terms_up_HBV_tumor_only.csv")
+```
+
+## Plot example gene
+
+```{r}
+# Tumor-adjacent only, up HCV
+hla_a <- fpkm[which(row.names(fpkm)=="ENSG00000206503.12"),]
+hla_a <- as.data.frame(hla_a)
+identical(metadata$sampleid, rownames(hla_a))
+
+metadata$hla_a <- hla_a$hla_a
+metadata$viral_tissue <- paste(metadata$Virus_infection, metadata$tumor, sep="")
+
+ggplot(metadata, aes(x=viral_tissue, y=hla_a)) + geom_boxplot(outlier.shape = NULL) + geom_jitter(width=0.05) + theme_minimal()
+
+# Tumor-adjacent only, up HBV
+ddx3y <- fpkm[which(row.names(fpkm)=="ENSG00000067048.16"),]
+ddx3y <- as.data.frame(ddx3y)
+identical(metadata$sampleid, rownames(ddx3y))
+
+metadata$ddx3y <- ddx3y$ddx3y
+
+ggplot(metadata, aes(x=viral_tissue, y=ddx3y)) + geom_boxplot(outlier.shape = NULL) + geom_jitter(width=0.05) + theme_minimal()
+
+# Tumor-only up HCV
+hottip <- fpkm[which(row.names(fpkm)=="ENSG00000243766.8"),]
+hottip <- as.data.frame(hottip)
+identical(metadata$sampleid, rownames(hottip))
+
+metadata$hottip <- hottip$hottip
+
+ggplot(metadata, aes(x=viral_tissue, y=hottip)) + geom_boxplot(outlier.shape = NULL) + geom_jitter(width=0.05) + theme_minimal()
+
+# Tumor-only up HBV
+muc5b <- fpkm[which(row.names(fpkm)=="ENSG00000117983.17"),]
+muc5b <- as.data.frame(muc5b)
+identical(metadata$sampleid, rownames(muc5b))
+
+metadata$muc5b <- muc5b$muc5b
+
+ggplot(metadata, aes(x=viral_tissue, y=log(muc5b))) + geom_boxplot(outlier.shape = NULL) + geom_jitter(width=0.05) + theme_minimal()
+
+# Shared tumor adjacent and tumor, up HCV
+ifi27 <- fpkm[which(row.names(fpkm)=="ENSG00000165949.12"),]
+ifi27 <- as.data.frame(ifi27)
+identical(metadata$sampleid, rownames(ifi27))
+
+metadata$ifi27 <- ifi27$ifi27
+
+ggplot(metadata, aes(x=viral_tissue, y=ifi27)) + geom_boxplot(outlier.shape = NULL) + geom_jitter(width=0.05) + theme_minimal()
+
+# Shared tumor adjacent and tumor, up HBV
+al <- fpkm[which(row.names(fpkm)=="ENSG00000273149.1"),]
+al <- as.data.frame(al)
+identical(metadata$sampleid, rownames(al))
+
+metadata$al <- al$al
+
+ggplot(metadata, aes(x=viral_tissue, y=al)) + geom_boxplot(outlier.shape = NULL) + geom_jitter(width=0.05) + theme_minimal()
+
+# Shared tumor adjacent HCV and tumor HBV
+c1ql1 <- fpkm[which(row.names(fpkm)=="ENSG00000131094.3"),]
+c1ql1 <- as.data.frame(c1ql1)
+identical(metadata$sampleid, rownames(c1ql1))
+
+metadata$c1ql1 <- c1ql1$c1ql1
+
+ggplot(metadata, aes(x=viral_tissue, y=c1ql1)) + geom_boxplot(outlier.shape = NULL) + geom_jitter(width=0.05) + theme_minimal()
+```
+
+
+**Interpretation:**
+
+* Model fit looks good before and after voom adjustment
+
+* Positive correlation for samples from the same patient
+
+* DEG lists saved
+
+

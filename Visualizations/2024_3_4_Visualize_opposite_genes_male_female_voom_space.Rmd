@@ -1,0 +1,550 @@
+---
+title: "2024_3_4_Visualize_interesting_genes"
+output: html_document
+date: "2024-03-4"
+---
+
+**Purpose:**
+
+* Visualize genes with opposite logFC in HBV/HCV and M/F
+
+**Methods:**
+
+* Voom transformation on all genes
+
+* Visualize boxplots of genes of interest
+
+**Results:**
+
+## Load libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(edgeR)
+library(DESeq2)
+library(limma)
+library(ggplot2)
+library(dplyr)
+```
+
+## Read in data
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+
+## Create DEG list object
+```{r}
+dge <- DGEList(counts=tumorAdjacentExp, genes=genes)
+
+colnames(dge) <- colnames(tumorAdjacentExp)
+dge$samples$ID <- metadata$ID
+dge$samples$tumor <- factor(metadata$tumor)
+dge$samples$library_type <- metadata$libtype
+dge$samples$viral <- metadata$Virus_infection
+dge$samples$tissue_viral <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+dge$samples$gender_tussue <- metadata$gender_tissue
+dge$samples$gender_tissue_viral <- metadata$gender_tissue_viral
+```
+
+## Filtering by FPKM expression level
+```{r}
+# Keeping genes that have a mean FPKM of at least 0.5 in at least one of the
+# groups under investigation and at least 6 reads in at least 10 samples
+fpkm <- rpkm(dge, gene.length=dge$genes$length)
+
+M_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HBV")],1,mean,na.rm=TRUE)
+M_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HBV")],1,mean,na.rm=TRUE)
+M_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HCV")],1,mean,na.rm=TRUE)
+M_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HCV")],1,mean,na.rm=TRUE)
+
+F_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HBV")],1,mean,na.rm=TRUE)
+F_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HBV")],1,mean,na.rm=TRUE)
+F_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HCV")],1,mean,na.rm=TRUE)
+F_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HCV")],1,mean,na.rm=TRUE)
+
+keep <- (M_1_HBV_mean_fpkm > 0.5 | M_0_HBV_mean_fpkm > 0.5 | 
+           M_1_HCV_mean_fpkm > 0.5 | M_0_HCV_mean_fpkm > 0.5 |
+           F_1_HBV_mean_fpkm > 0.5 | F_0_HBV_mean_fpkm > 0.5 |
+           F_1_HCV_mean_fpkm > 0.5 | F_0_HCV_mean_fpkm > 0.5 )
+
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+keep <- rowSums(dge$counts > 6) >= 10
+dge <- dge[keep,,keep.lib.size=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+
+# N of genes retained after filtering
+dim(dge$genes)
+```
+
+## Create design matrix
+```{r}
+design <- model.matrix(~0+dge$samples$gender_tussue+dge$samples$library_type)
+colnames(design) <- gsub("dge\\$samples\\$gender_tussue", "", colnames(design))
+colnames(design) <- gsub("dge\\$samples\\$library_typeunstranded", "library_type", colnames(design))
+head(design)
+```
+
+## Voom analysis
+```{r}
+v <- voomWithQualityWeights(dge, design, plot=TRUE)
+```
+
+## Test expression pre- versus post- voom
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+M_T <- vexpr[,which(metadata$tumor==1 & metadata$Gender=="M")]
+M_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Gender=="M")]
+F_T <- vexpr[,which(metadata$tumor==1 & metadata$Gender=="F")]
+F_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Gender=="F")]
+
+genes <- genes[match(row.names(M_T), genes$GENEID),]
+identical(row.names(M_T), genes$GENEID)
+
+
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="LINC01370"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="LINC01370"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="LINC01370"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="LINC01370"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000237767.1))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("LINC01370")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/LINC01370_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000237767.1))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("LINC01370")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="MEAF6"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="MEAF6"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="MEAF6"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="MEAF6"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000163875.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MEAF6")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/MEAF6_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000163875.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MEAF6")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="MIR6753"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="MIR6753"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="MIR6753"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="MIR6753"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000275022.1))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("MIR6753")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/MIR6753_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000275022.1))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MIR6753")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="GPR153"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="GPR153"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="GPR153"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="GPR153"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000158292.6))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/GPR153_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000158292.6))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("GPR153")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="INO80E"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="INO80E"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="INO80E"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="INO80E"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000169592.14))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("INO80E")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/INO80E_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000169592.14))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("INO80E")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="ADGRD1"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="ADGRD1"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="ADGRD1"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="ADGRD1"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000111452.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("ADGRD1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/ADGRD1_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000111452.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("ADGRD1")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="MRNIP"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="MRNIP"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="MRNIP"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="MRNIP"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000161010.14))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("MRNIP")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/MRNIP_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000161010.14))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MRNIP")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="KLK4"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="KLK4"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="KLK4"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="KLK4"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000167749.11))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("KLK4")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/KLK4_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000167749.11))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("KLK4")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="ACP2"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="ACP2"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="ACP2"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="ACP2"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000134575.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("ACP2")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/ACP2_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000134575.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("ACP2")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="KCTD13"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="KCTD13"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="KCTD13"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="KCTD13"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000174943.10))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("KCTD13")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/KCTD13_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000174943.10))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("KCTD13")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="MIR483"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="MIR483"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="MIR483"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="MIR483"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000207805.3))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("MIR483")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/MIR483_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000207805.3))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MIR483")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="TELO2"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="TELO2"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="TELO2"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="TELO2"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000100726.14))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("TELO2")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/TELO2_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000100726.14))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("TELO2")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="BET1"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="BET1"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="BET1"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="BET1"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000105829.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("BET1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/BET1_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000105829.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("BET1")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="EVPL"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="EVPL"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="EVPL"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="EVPL"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000167880.7))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("EVPL")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/EVPL_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000167880.7))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("EVPL")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="RPL12P14"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="RPL12P14"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="RPL12P14"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="RPL12P14"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000224321.1))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("RPL12P14")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/RPL12P14_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000224321.1))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("RPL12P14")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="RABL2B"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="RABL2B"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="RABL2B"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="RABL2B"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000079974.17))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("RABL2B")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/RABL2B_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000079974.17))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("RABL2B")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="AC004233.3"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="AC004233.3"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="AC004233.3"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="AC004233.3"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000272079.2))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("AC004233.3")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/AC004233.3_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000272079.2))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("AC004233.3")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="HIRIP3"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="HIRIP3"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="HIRIP3"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="HIRIP3"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000149929.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("HIRIP3")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/HIRIP3_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000149929.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("HIRIP3")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="GNPTG"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="GNPTG"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="GNPTG"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="GNPTG"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000090581.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("GNPTG")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/GNPTG_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000090581.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("GNPTG")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="ZNF862"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="ZNF862"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="ZNF862"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="ZNF862"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000106479.10))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("ZNF862")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/ZNF862_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000106479.10))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("ZNF862")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="SLC26A1"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="SLC26A1"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="SLC26A1"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="SLC26A1"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000145217.13))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("SLC26A1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/SLC26A1_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000145217.13))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SLC26A1")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="SLC9A3-AS1"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="SLC9A3-AS1"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="SLC9A3-AS1"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="SLC9A3-AS1"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000225138.7))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("SLC9A3-AS1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/SLC9A3-AS1_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000225138.7))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SLC9A3-AS1")
+dev.off()
+```
+
+```{r}
+M_T_tg <- as.data.frame(t(M_T[which(genes$gene_name=="STARD8"),]))
+M_T_tg$group <- "M_T"
+M_Ta_tg <- as.data.frame(t(M_Ta[which(genes$gene_name=="STARD8"),]))
+M_Ta_tg$group <- "M_Ta"
+F_T_tg <- as.data.frame(t(F_T[which(genes$gene_name=="STARD8"),]))
+F_T_tg$group <- "F_T"
+F_Ta_tg <- as.data.frame(t(F_Ta[which(genes$gene_name=="STARD8"),]))
+F_Ta_tg$group <- "F_ta"
+
+target_gene <- rbind(M_T_tg, M_Ta_tg, F_T_tg, F_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000130052.13))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()+ ylab("STARD8")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/STARD8_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000130052.13))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("STARD8")
+dev.off()
+```
+
+**Interpretation:**
+
+* Most genes are consistent with the limma/voom pathway predictions
+
+* A few do not seem consistent
+
+* A few are also associated with survival in TCGA based on GEPIA2 analysis - consider including in presentation
+
+**Future steps:**
+
+* Integrate into a figure
+
+* Repeat for HBV/HCV genes
+

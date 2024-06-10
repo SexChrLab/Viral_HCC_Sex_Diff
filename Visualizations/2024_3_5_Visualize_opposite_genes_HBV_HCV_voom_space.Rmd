@@ -1,0 +1,552 @@
+---
+title: "2024_3_4_Visualize_interesting_genes"
+output: html_document
+date: "2024-03-4"
+---
+
+**Purpose:**
+
+* Visualize genes with opposite logFC in HBV/HCV and M/F
+
+**Methods:**
+
+* Voom transformation on all genes
+
+* Visualize boxplots of genes of interest
+
+**Results:**
+
+## Load libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(edgeR)
+library(DESeq2)
+library(limma)
+library(ggplot2)
+library(dplyr)
+```
+
+## Read in data
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+
+## Create DEG list object
+```{r}
+dge <- DGEList(counts=tumorAdjacentExp, genes=genes)
+
+colnames(dge) <- colnames(tumorAdjacentExp)
+dge$samples$ID <- metadata$ID
+dge$samples$tumor <- factor(metadata$tumor)
+dge$samples$library_type <- metadata$libtype
+dge$samples$viral <- metadata$Virus_infection
+dge$samples$tissue_viral <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+dge$samples$gender_tussue <- metadata$gender_tissue
+dge$samples$gender_tissue_viral <- metadata$gender_tissue_viral
+```
+
+## Filtering by FPKM expression level
+```{r}
+# Keeping genes that have a mean FPKM of at least 0.5 in at least one of the
+# groups under investigation and at least 6 reads in at least 10 samples
+fpkm <- rpkm(dge, gene.length=dge$genes$length)
+
+M_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HBV")],1,mean,na.rm=TRUE)
+M_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HBV")],1,mean,na.rm=TRUE)
+M_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HCV")],1,mean,na.rm=TRUE)
+M_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HCV")],1,mean,na.rm=TRUE)
+
+F_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HBV")],1,mean,na.rm=TRUE)
+F_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HBV")],1,mean,na.rm=TRUE)
+F_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HCV")],1,mean,na.rm=TRUE)
+F_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HCV")],1,mean,na.rm=TRUE)
+
+keep <- (M_1_HBV_mean_fpkm > 0.5 | M_0_HBV_mean_fpkm > 0.5 | 
+           M_1_HCV_mean_fpkm > 0.5 | M_0_HCV_mean_fpkm > 0.5 |
+           F_1_HBV_mean_fpkm > 0.5 | F_0_HBV_mean_fpkm > 0.5 |
+           F_1_HCV_mean_fpkm > 0.5 | F_0_HCV_mean_fpkm > 0.5 )
+
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+keep <- rowSums(dge$counts > 6) >= 10
+dge <- dge[keep,,keep.lib.size=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+
+# N of genes retained after filtering
+dim(dge$genes)
+```
+
+## Create design matrix
+```{r}
+design <- model.matrix(~0+dge$samples$tissue_viral+dge$samples$library_type)
+colnames(design) <- gsub("dge\\$samples\\$tissue_viral", "", colnames(design))
+colnames(design) <- gsub("dge\\$samples\\$library_typeunstranded", "library_type", colnames(design))
+head(design)
+```
+
+## Voom analysis
+```{r}
+v <- voomWithQualityWeights(dge, design, plot=TRUE)
+```
+
+## Test expression pre- versus post- voom
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="PLXNB3"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="PLXNB3"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="PLXNB3"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="PLXNB3"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000198753.11))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("PLXNB3")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/PLXNB3_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000198753.11))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("PLXNB3")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="VSIR"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="VSIR"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="VSIR"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="VSIR"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000107738.19))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("VSIR")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/VSIR_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000107738.19))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("VSIR")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="MAPK7"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="MAPK7"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="MAPK7"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="MAPK7"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000166484.19))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MAPK7")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/MAPK7_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000166484.19))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MAPK7")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="TGFB1"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="TGFB1"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="TGFB1"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="TGFB1"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000105329.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("TGFB1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/TGFB1_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000105329.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("TGFB1")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="JAG1"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="JAG1"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="JAG1"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="JAG1"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000101384.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("JAG1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/JAG1_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000101384.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("JAG1")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="LGALS9"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="LGALS9"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="LGALS9"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="LGALS9"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000168961.16))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("LGALS9")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/LGALS9_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000168961.16))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("LGALS9")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="CTLA4"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="CTLA4"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="CTLA4"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="CTLA4"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000163599.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("CTLA4")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/CTLA4_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000163599.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("CTLA4")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="SIPA1"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="SIPA1"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="SIPA1"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="SIPA1"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000213445.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SIPA1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/SIPA1_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000213445.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SIPA1")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="LGALS3"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="LGALS3"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="LGALS3"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="LGALS3"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000131981.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("LGALS3")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/LGALS3_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000131981.15))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("LGALS3")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="MUC1"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="MUC1"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="MUC1"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="MUC1"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000185499.16))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MUC1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/MUC1_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000185499.16))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MUC1")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="SERPINE2"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="SERPINE2"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="SERPINE2"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="SERPINE2"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000135919.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SERPINE2")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/SERPINE2_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000135919.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SERPINE2")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="SRC"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="SRC"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="SRC"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="SRC"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000197122.11))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SRC")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/SRC_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000197122.11))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("SRC")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="ACVRL1"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="ACVRL1"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="ACVRL1"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="ACVRL1"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000139567.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("ACVRL1")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/ACVRL1_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000139567.12))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("ACVRL1")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="MIA3"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="MIA3"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="MIA3"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="MIA3"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000154305.16))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MIA3")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/MIA3_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000154305.16))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("MIA3")
+dev.off()
+```
+
+```{r}
+vexpr <- as.data.frame(v$E)
+identical(colnames(vexpr), metadata$sampleid)
+HBV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+HBV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+HCV_T <- vexpr[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+HCV_Ta <- vexpr[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+genes <- genes[match(row.names(HBV_T), genes$GENEID),]
+identical(row.names(HBV_T), genes$GENEID)
+
+
+HBV_T_tg <- as.data.frame(t(HBV_T[which(genes$gene_name=="FSTL3"),]))
+HBV_T_tg$group <- "HBV_T"
+HBV_Ta_tg <- as.data.frame(t(HBV_Ta[which(genes$gene_name=="FSTL3"),]))
+HBV_Ta_tg$group <- "HBV_Ta"
+HCV_T_tg <- as.data.frame(t(HCV_T[which(genes$gene_name=="FSTL3"),]))
+HCV_T_tg$group <- "HCV_T"
+HCV_Ta_tg <- as.data.frame(t(HCV_Ta[which(genes$gene_name=="FSTL3"),]))
+HCV_Ta_tg$group <- "HCV_ta"
+
+target_gene <- rbind(HBV_T_tg, HBV_Ta_tg, HCV_T_tg, HCV_Ta_tg)
+ggplot(target_gene, aes(x=group, y=ENSG00000070404.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("FSTL3")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Boxplots_opposite_direction_genes/FSTL3_HBV_HCV_boxplot.pdf")
+ggplot(target_gene, aes(x=group, y=ENSG00000070404.9))+ geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal() + ylab("FSTL3")
+dev.off()
+```
+
+**Interpretation:**
+
+
+**Future steps:**
+
+

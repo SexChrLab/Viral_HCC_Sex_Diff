@@ -1,0 +1,236 @@
+---
+title: "2024_3_23_Immune_deconvolution"
+output: html_document
+date: "2024-03-23"
+---
+
+**Purpose:** Visualize genes with opposite regulation in HBV and HCV
+
+**Methods:**
+
+* Read in expression, normalize towards TPM, visualize boxplots of tumor normal in HBV vs. HCV
+
+```{r, message=FALSE, warning=FALSE}
+library(DGEobj.utils)
+library(immunedeconv)
+library(pheatmap)
+library(ggplot2)
+```
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+## Converting to TPM
+
+```{r}
+tumorAdjacentExp <- as.matrix(tumorAdjacentExp)
+expression_tpm <- convertCounts(tumorAdjacentExp, unit="TPM", geneLength = genes$length)
+```
+
+## Run Quantiseq
+```{r}
+row.names(expression_tpm) <- genes$gene_name
+res_quantiseq <- deconvolute(expression_tpm, "quantiseq", tumor=TRUE)
+```
+
+## Heatmap Quantiseq
+```{r}
+res_quantiseq_heatmap <- as.data.frame(res_quantiseq)
+row.names(res_quantiseq_heatmap) <- res_quantiseq_heatmap$cell_type
+res_quantiseq_heatmap <- res_quantiseq_heatmap[,-1]
+res_quantiseq_heatmap <- res_quantiseq_heatmap[-11,]
+
+identical(metadata$sampleid, colnames(res_quantiseq_heatmap))
+
+metadata$virus_tumor <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+annotation <- as.data.frame(metadata[,c(4,104)])
+row.names(annotation) <- colnames(res_quantiseq_heatmap)
+
+annotation <- annotation[order(annotation$Gender),]
+annotation <- annotation[order(annotation$virus_tumor),]
+res_quantiseq_heatmap <- res_quantiseq_heatmap[,match(row.names(annotation), colnames(res_quantiseq_heatmap))]
+identical(row.names(annotation), colnames(res_quantiseq_heatmap))
+
+pheatmap(res_quantiseq_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F)
+
+#pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/quantiseq_heatmap.pdf")
+#pheatmap(res_quantiseq_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F)
+#dev.off()
+```
+
+## Boxplots
+
+```{r}
+res_quantiseq_boxplots <- as.data.frame(t(res_quantiseq_heatmap))
+res_quantiseq_boxplots <- res_quantiseq_boxplots[match(metadata$sampleid, row.names(res_quantiseq_boxplots)),]
+identical(metadata$sampleid, rownames(res_quantiseq_boxplots))
+res_quantiseq_boxplots$viral_tissue <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+res_quantiseq_boxplots$viral_tissue_gender <- paste(metadata$Virus_infection, metadata$tumor, metadata$Gender, sep="_")
+
+HBV_tumor <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="1"),]
+HBV_adjacent <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="0"),]
+HCV_tumor <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="1"),]
+HCV_adjacent <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="0"),]
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue_gender, y=`Macrophage M1`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`Macrophage M1`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(HBV_tumor$`Macrophage M1`, HCV_tumor$`Macrophage M1`)
+t.test(HBV_adjacent$`Macrophage M1`, HCV_adjacent$`Macrophage M1`)
+t.test(HBV_tumor$`Macrophage M1`, HBV_adjacent$`Macrophage M1`)
+t.test(HCV_tumor$`Macrophage M1`, HCV_adjacent$`Macrophage M1`)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/Mac_M1_quantiseq.pdf")
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`Macrophage M1`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue_gender, y=`Macrophage M2`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`Macrophage M2`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(HBV_tumor$`Macrophage M2`, HCV_tumor$`Macrophage M2`)
+t.test(HBV_adjacent$`Macrophage M2`, HCV_adjacent$`Macrophage M2`)
+t.test(HBV_tumor$`Macrophage M2`, HBV_adjacent$`Macrophage M2`)
+t.test(HCV_tumor$`Macrophage M2`, HCV_adjacent$`Macrophage M2`)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/Mac_M2_quantiseq.pdf")
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`Macrophage M2`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`Monocyte`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(HBV_tumor$`Monocyte`, HCV_tumor$`Monocyte`)
+t.test(HBV_adjacent$`Monocyte`, HCV_adjacent$`Monocyte`)
+t.test(HBV_tumor$`Monocyte`, HBV_adjacent$`Monocyte`)
+t.test(HCV_tumor$`Monocyte`, HCV_adjacent$`Monocyte`)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/Monocyte_quantiseq.pdf")
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`Monocyte`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`T cell CD8+`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(HBV_tumor$`T cell CD8+`, HCV_tumor$`T cell CD8+`)
+t.test(HBV_adjacent$`T cell CD8+`, HCV_adjacent$`T cell CD8+`)
+t.test(HBV_tumor$`T cell CD8+`, HBV_adjacent$`T cell CD8+`)
+t.test(HCV_tumor$`T cell CD8+`, HCV_adjacent$`T cell CD8+`)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/CD8_quantiseq.pdf")
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`T cell CD8+`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`B cell`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(HBV_tumor$`B cell`, HCV_tumor$`B cell`)
+t.test(HBV_adjacent$`B cell`, HCV_adjacent$`B cell`)
+t.test(HBV_tumor$`B cell`, HBV_adjacent$`B cell`)
+t.test(HCV_tumor$`B cell`, HCV_adjacent$`B cell`)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/B_quantiseq.pdf")
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`B cell`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`Neutrophil`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`T cell regulatory (Tregs)`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=`T cell CD4+ (non-regulatory)`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+```
+
+## Run Xcell
+```{r}
+res_xcell <- deconvolute(expression_tpm, "xcell", tumor=TRUE)
+```
+
+```{r}
+res_xcell_heatmap <- as.data.frame(res_xcell)
+row.names(res_xcell_heatmap) <- res_xcell_heatmap$cell_type
+res_xcell_heatmap <- res_xcell_heatmap[,-1]
+res_quantiseq_heatmap <- res_quantiseq_heatmap[1:36,]
+res_xcell_heatmap <- res_xcell_heatmap[which(rowSums(res_xcell_heatmap>0.05)>10),]
+
+identical(metadata$sampleid, colnames(res_xcell_heatmap))
+
+metadata$virus_tumor <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+annotation <- as.data.frame(metadata[,c(4,104)])
+row.names(annotation) <- colnames(res_xcell_heatmap)
+
+annotation <- annotation[order(annotation$Gender),]
+annotation <- annotation[order(annotation$virus_tumor),]
+res_xcell_heatmap <- res_xcell_heatmap[,match(row.names(annotation), colnames(res_xcell_heatmap))]
+identical(row.names(annotation), colnames(res_xcell_heatmap))
+
+pheatmap(res_xcell_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F)
+
+#pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/xcell_heatmap.pdf")
+#pheatmap(res_xcell_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F)
+#dev.off()
+```
+
+## Boxplots
+
+```{r}
+res_xcell_boxplots <- as.data.frame(t(res_xcell_heatmap))
+res_xcell_boxplots <- res_xcell_boxplots[match(metadata$sampleid, row.names(res_xcell_boxplots)),]
+identical(metadata$sampleid, rownames(res_xcell_boxplots))
+res_xcell_boxplots$viral_tissue <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+res_xcell_boxplots$viral_tissue_gender <- paste(metadata$Virus_infection, metadata$tumor, metadata$Gender, sep="_")
+
+HBV_tumor <- res_xcell_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="1"),]
+HBV_adjacent <- res_xcell_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="0"),]
+HCV_tumor <- res_xcell_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="1"),]
+HCV_adjacent <- res_xcell_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="0"),]
+
+ggplot(res_xcell_boxplots, aes(x=viral_tissue, y=`T cell CD8+`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(HBV_tumor$`T cell CD8+`, HCV_tumor$`T cell CD8+`)
+t.test(HBV_adjacent$`T cell CD8+`, HCV_adjacent$`T cell CD8+`)
+t.test(HBV_tumor$`T cell CD8+`, HBV_adjacent$`T cell CD8+`)
+t.test(HCV_tumor$`T cell CD8+`, HCV_adjacent$`T cell CD8+`)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/CD8_xcell.pdf")
+ggplot(res_xcell_boxplots, aes(x=viral_tissue, y=`T cell CD8+`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+
+ggplot(res_xcell_boxplots, aes(x=viral_tissue, y=`immune score`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(HBV_tumor$`immune score`, HCV_tumor$`immune score`)
+t.test(HBV_adjacent$`immune score`, HCV_adjacent$`immune score`)
+t.test(HBV_tumor$`immune score`, HBV_adjacent$`immune score`)
+t.test(HCV_tumor$`immune score`, HCV_adjacent$`immune score`)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/immune_xcell.pdf")
+ggplot(res_xcell_boxplots, aes(x=viral_tissue, y=`immune score`)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+```
+
+## Run MCP_counter
+```{r}
+res_mcp <- deconvolute(expression_tpm, "mcp_counter", tumor=TRUE)
+```
+
+## Heatmap MCP Counter
+```{r}
+res_mcp_heatmap <- as.data.frame(res_mcp)
+row.names(res_mcp_heatmap) <- res_mcp_heatmap$cell_type
+res_mcp_heatmap <- res_mcp_heatmap[,-1]
+res_mcp_heatmap <- res_mcp_heatmap[-11,]
+
+identical(metadata$sampleid, colnames(res_mcp_heatmap))
+
+metadata$virus_tumor <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+annotation <- as.data.frame(metadata[,c(4,104)])
+row.names(annotation) <- colnames(res_mcp_heatmap)
+
+annotation <- annotation[order(annotation$Gender),]
+annotation <- annotation[order(annotation$virus_tumor),]
+res_mcp_heatmap <- res_mcp_heatmap[,match(row.names(annotation), colnames(res_mcp_heatmap))]
+identical(row.names(annotation), colnames(res_mcp_heatmap))
+
+pheatmap(res_mcp_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F, scale="row")
+
+#pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/mcp_heatmap.pdf")
+#pheatmap(res_mcp_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F, scale="row")
+#dev.off()
+```
+

@@ -1,0 +1,230 @@
+---
+title: "2024_3_18_revigo_plots_viral_sex_pathway_analysis"
+output: html_document
+date: "2024-03-18"
+---
+
+
+
+## Male HBV
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006913","nucleocytoplasmic transport",0.5732591269081895,4.958607314841775,0.8981151369224701,0.01076176,"nucleocytoplasmic transport"),
+c("GO:0006403","RNA localization",0.38503431460554743,3.413484708673666,0.9259502191646891,0.24273591,"nucleocytoplasmic transport"),
+c("GO:0006888","endoplasmic reticulum to Golgi vesicle-mediated transport",0.41624285459502003,2.6919485060865673,0.8988760963251876,0.64130141,"nucleocytoplasmic transport"),
+c("GO:0006900","vesicle budding from membrane",0.13512198541327333,1.4101638882859475,0.8605387691436323,0.65102059,"nucleocytoplasmic transport"),
+c("GO:0032510","endosome to lysosome transport via multivesicular body sorting pathway",0.006871695584477145,1.3033474657509059,0.924192398412395,0.46283856,"nucleocytoplasmic transport"),
+c("GO:0032527","protein exit from endoplasmic reticulum",0.051232089102920354,1.7211980579045703,0.9065453546922912,0.53583363,"nucleocytoplasmic transport"),
+c("GO:0043277","apoptotic cell clearance",0.04228015281783391,1.383241472958733,0.9435340482017577,0.21243302,"nucleocytoplasmic transport"),
+c("GO:0045048","protein insertion into ER membrane",0.032724355191930794,1.827577011384752,0.8378213778936386,0.6998735,"nucleocytoplasmic transport"),
+c("GO:0048193","Golgi vesicle transport",0.842896771653753,2.165823027429323,0.9295039989332087,0.6923864,"nucleocytoplasmic transport"),
+c("GO:0050657","nucleic acid transport",0.3381820687786729,1.8527546292656967,0.9381617976067391,0.25313966,"nucleocytoplasmic transport"),
+c("GO:0051169","nuclear transport",0.5733749696960196,4.958607314841775,0.9060235028960989,0.66119783,"nucleocytoplasmic transport"),
+c("GO:0051205","protein insertion into membrane",0.1374659533117087,2.157856066574316,0.8414167778208897,0.58580007,"nucleocytoplasmic transport"),
+c("GO:0051236","establishment of RNA localization",0.3382683346845039,2.165823027429323,0.917887974995952,0.48957275,"nucleocytoplasmic transport"),
+c("GO:0072594","establishment of protein localization to organelle",1.1761123889967295,4.1605219526258015,0.8841284148630505,0.55490121,"nucleocytoplasmic transport"),
+c("GO:0008380","RNA splicing",0.9742871404547958,9.508638306165727,0.8715325397998449,-0,"RNA splicing"),
+c("GO:0000398","mRNA splicing, via spliceosome",0.7874425826454491,6.059483515067432,0.860931108001163,0.62778444,"RNA splicing"),
+c("GO:0001522","pseudouridine synthesis",0.2739262926354451,1.6339662702789641,0.8994245333304546,0.53639167,"RNA splicing"),
+c("GO:0002181","cytoplasmic translation",0.3974763229665376,4.987162775294828,0.9086779709372894,0.35530695,"RNA splicing"),
+c("GO:0006457","protein folding",1.174377211919444,4.1605219526258015,0.888177098249326,0.39771984,"RNA splicing"),
+c("GO:0006633","fatty acid biosynthetic process",0.8690673827426977,1.8527546292656967,0.9228459202085803,0.20012631,"RNA splicing"),
+c("GO:0006641","triglyceride metabolic process",0.19956508180916263,1.3071692018921988,0.9571626748294124,0.51432539,"RNA splicing"),
+c("GO:0006644","phospholipid metabolic process",1.8076404381834787,1.840052694805721,0.9481595949204074,0.64372732,"RNA splicing"),
+c("GO:0009451","RNA modification",1.8323814999757961,2.931605578511759,0.8851308623480247,0.53382478,"RNA splicing"),
+c("GO:0016236","macroautophagy",0.3184740064065498,2.348390478311939,0.9572060610790267,0.39161917,"RNA splicing"),
+c("GO:0018205","peptidyl-lysine modification",0.12216977583779723,1.8527546292656967,0.9356998867500734,0.28171912,"RNA splicing"),
+c("GO:0043161","proteasome-mediated ubiquitin-dependent protein catabolic process",0.7029611486951124,3.8073349946751955,0.9253345344827381,0.17981261,"RNA splicing"),
+c("GO:0045116","protein neddylation",0.03825030264544506,1.3345376729437315,0.9409774518140236,0.43233021,"RNA splicing"),
+c("GO:0046486","glycerolipid metabolic process",1.338484541691918,1.3498218420492638,0.9495671581454576,0.67711456,"RNA splicing"),
+c("GO:0097428","protein maturation by iron-sulfur cluster transfer",0.09920825644576384,1.8181960146602894,0.908787835208879,0.6900585,"RNA splicing"),
+c("GO:0098781","ncRNA transcription",0.11422591828084964,1.3140097459354223,0.8940429466289077,0.40393951,"RNA splicing"),
+c("GO:0140053","mitochondrial gene expression",0.3272164397774754,1.4250753179113544,0.9163831528366103,0.34863174,"RNA splicing"),
+c("GO:0016032","viral process",0.19404652857614818,4.019996628416254,1,-0,"viral process"),
+c("GO:0016064","immunoglobulin mediated immune response",0.05364506972602047,13.387216143280265,0.8681449408553916,0,"immunoglobulin mediated immune response"),
+c("GO:0002377","immunoglobulin production",0.036559490891158355,11.692503962086787,0.8763112491851943,0.59829578,"immunoglobulin mediated immune response"),
+c("GO:0002440","production of molecular mediator of immune response",0.036902089774315576,11.1791420105603,0.8762352309431896,0.59865732,"immunoglobulin mediated immune response"),
+c("GO:0002757","immune response-activating signaling pathway",0.13753003655604026,2.3147409994195205,0.6470551572105362,0.65443631,"immunoglobulin mediated immune response"),
+c("GO:0006986","response to unfolded protein",0.16809527936203061,4.0762380391713,0.883703726775114,0.40196883,"immunoglobulin mediated immune response"),
+c("GO:0009615","response to virus",0.20032422178047504,2.932185860347713,0.8957866967598337,0.63923322,"immunoglobulin mediated immune response"),
+c("GO:0030282","bone mineralization",0.01402683628811314,1.4101638882859475,0.9798764499698815,0.32226853,"immunoglobulin mediated immune response"),
+c("GO:0034644","cellular response to UV",0.026446661987603932,2.4822768006987594,0.9141395219578692,0.23811915,"immunoglobulin mediated immune response"),
+c("GO:0034976","response to endoplasmic reticulum stress",0.252707344541197,7.035269078946371,0.8864141191089477,0.21220591,"immunoglobulin mediated immune response"),
+c("GO:0035966","response to topologically incorrect protein",0.1942264546083099,4.436518914605589,0.8910757614941445,0.62426968,"immunoglobulin mediated immune response"),
+c("GO:0042772","DNA damage response, signal transduction resulting in transcription",0.0009020949009751202,1.49118985101792,0.8328608494078141,0.33240005,"immunoglobulin mediated immune response"),
+c("GO:0044403","biological process involved in symbiotic interaction",0.16708966537405834,1.368077299906775,0.981060484787837,0.69569426,"immunoglobulin mediated immune response"),
+c("GO:0048545","response to steroid hormone",0.08089030752760239,1.7211980579045703,0.9125173696469494,0.58378938,"immunoglobulin mediated immune response"),
+c("GO:0060338","regulation of type I interferon-mediated signaling pathway",0.004806243324867444,1.714397171215312,0.8236205899143315,0.67862786,"immunoglobulin mediated immune response"),
+c("GO:0061900","glial cell activation",0.0045400513868747855,2.024565985556114,0.8903292146944636,0.31112491,"immunoglobulin mediated immune response"),
+c("GO:0071496","cellular response to external stimulus",0.6305470826004429,4.1605219526258015,0.8960094392685507,0.25954148,"immunoglobulin mediated immune response"),
+c("GO:0072331","signal transduction by p53 class mediator",0.029643429983682437,4.565431095965801,0.8199374353698964,0.39451702,"immunoglobulin mediated immune response"),
+c("GO:0097193","intrinsic apoptotic signaling pathway",0.06402409056756754,4.732828271596986,0.8004127303385724,0.25390755,"immunoglobulin mediated immune response"),
+c("GO:0104004","cellular response to environmental stimulus",0.2105652171726926,1.3498218420492638,0.913004878602925,0.27879971,"immunoglobulin mediated immune response"),
+c("GO:0150076","neuroinflammatory response",0.005543200634680452,2.1102435071625187,0.9116989504522867,0.65558377,"immunoglobulin mediated immune response"),
+c("GO:0019080","viral gene expression",0.006755852796647007,1.9900335687519444,1,-0,"viral gene expression"),
+c("GO:0042254","ribosome biogenesis",2.136224808753416,7.46344155742847,0.884922536271687,0.0124317,"ribosome biogenesis"),
+c("GO:0000027","ribosomal large subunit assembly",0.012821578346646382,1.525091646268139,0.8982440698134163,0.55914193,"ribosome biogenesis"),
+c("GO:0008535","respiratory chain complex IV assembly",0.08822783900356668,2.44679733457022,0.9043438692850222,0.51900674,"ribosome biogenesis"),
+c("GO:0016050","vesicle organization",0.49145933025911226,2.44679733457022,0.9168165280984018,0.36069848,"ribosome biogenesis"),
+c("GO:0017004","cytochrome complex assembly",0.2776653034681753,2.540723792057928,0.8988456640710872,0.57349945,"ribosome biogenesis"),
+c("GO:0031468","nuclear membrane reassembly",0.012405037258491201,1.991061210585921,0.8987809328390897,0.38611742,"ribosome biogenesis"),
+c("GO:0033108","mitochondrial respiratory chain complex assembly",0.33927148393230955,2.342093419362105,0.8906893056777332,0.63746937,"ribosome biogenesis"),
+c("GO:0034380","high-density lipoprotein particle assembly",0.0013777897531286672,1.379385172838954,0.8278060216585138,0.38595845,"ribosome biogenesis"),
+c("GO:0044091","membrane biogenesis",0.10454934838678319,1.8181960146602894,0.9217080725700397,0.46296872,"ribosome biogenesis"),
+c("GO:0061668","mitochondrial ribosome assembly",0.015138434103249148,1.368077299906775,0.9040132476574481,0.66756125,"ribosome biogenesis"),
+c("GO:0071826","protein-RNA complex organization",0.6518695497816881,4.406713932979542,0.9131575076179502,0.37217301,"ribosome biogenesis"),
+c("GO:0090161","Golgi ribbon formation",0.0051981370113566355,1.368077299906775,0.9293756495403879,0.53232966,"ribosome biogenesis"),
+c("GO:0043484","regulation of RNA splicing",0.23003419974865566,6.305394801066432,0.8355168036330807,-0,"regulation of RNA splicing"),
+c("GO:0001819","positive regulation of cytokine production",0.12405283732507863,1.5458710661087056,0.7607193229277412,0.64796941,"regulation of RNA splicing"),
+c("GO:0009895","negative regulation of catabolic process",0.16801640767669945,2.2903135027484285,0.8030685143562175,0.253922,"regulation of RNA splicing"),
+c("GO:0014015","positive regulation of gliogenesis",0.00577242147017413,1.8596618112567862,0.8275759159027039,0.35579698,"regulation of RNA splicing"),
+c("GO:0019216","regulation of lipid metabolic process",0.10650635207906255,1.4012573886043072,0.8501294332454985,0.26186885,"regulation of RNA splicing"),
+c("GO:0030100","regulation of endocytosis",0.07926111427748064,2.887840579874319,0.838954436613521,0.15579069,"regulation of RNA splicing"),
+c("GO:0031053","primary miRNA processing",0.02671531866576319,1.3708713253062594,0.7476523647280676,0.4670179,"regulation of RNA splicing"),
+c("GO:0031647","regulation of protein stability",0.12396903615941428,3.9963757766169468,0.8886658615336879,0.14249069,"regulation of RNA splicing"),
+c("GO:0033157","regulation of intracellular protein transport",0.03654223770999217,1.9856583400392762,0.83803869918813,0.65923443,"regulation of RNA splicing"),
+c("GO:0034250","positive regulation of amide metabolic process",0.1441527933836909,2.488206580698892,0.7675583388282128,0.271033,"regulation of RNA splicing"),
+c("GO:0035306","positive regulation of dephosphorylation",0.008370257605769147,1.7355546025304716,0.7939513479215916,0.43300574,"regulation of RNA splicing"),
+c("GO:0043525","positive regulation of neuron apoptotic process",0.011616320405179622,1.7623572751084438,0.8066721264603,0.60345102,"regulation of RNA splicing"),
+c("GO:0045786","negative regulation of cell cycle",0.3768020824491078,1.8576590661851218,0.8348919385046014,0.47651243,"regulation of RNA splicing"),
+c("GO:0045862","positive regulation of proteolysis",0.2204069246579212,3.7560323159635836,0.6938852915585587,0.57781753,"regulation of RNA splicing"),
+c("GO:0045943","positive regulation of transcription by RNA polymerase I",0.030281797686831497,1.4101638882859475,0.7849175677642154,0.49435158,"regulation of RNA splicing"),
+c("GO:0048024","regulation of mRNA splicing, via spliceosome",0.1635700164161554,4.441291429466834,0.8166121512418076,0.30483339,"regulation of RNA splicing"),
+c("GO:0048145","regulation of fibroblast proliferation",0.00930685886907665,1.3995087742371426,0.8980648491505662,0.13406081,"regulation of RNA splicing"),
+c("GO:0050821","protein stabilization",0.10143638155636905,1.9286580312248702,0.8900612056220543,0.48179749,"regulation of RNA splicing"),
+c("GO:0052547","regulation of peptidase activity",0.0012989180677975092,2.8754429587783097,0.7647347390729418,0.660782,"regulation of RNA splicing"),
+c("GO:0060759","regulation of response to cytokine stimulus",0.024359027066494846,1.3071692018921988,0.8414889805524701,0.42081814,"regulation of RNA splicing"),
+c("GO:0150077","regulation of neuroinflammatory response",0.013381074364464281,1.612605510360313,0.8361003326781868,0.57255241,"regulation of RNA splicing"),
+c("GO:1901222","regulation of non-canonical NF-kappaB signal transduction",0.031072979280309675,1.4101638882859475,0.8292496004043834,0.57416782,"regulation of RNA splicing"),
+c("GO:1901796","regulation of signal transduction by p53 class mediator",0.014800764700425127,2.540723792057928,0.8361930363590785,0.13823691,"regulation of RNA splicing"),
+c("GO:1901798","positive regulation of signal transduction by p53 class mediator",0.0043453369137134885,2.44679733457022,0.785919280395414,0.48165749,"regulation of RNA splicing"),
+c("GO:1903320","regulation of protein modification by small protein conjugation or removal",0.08533916352831301,4.1180450286604,0.7631839703062664,0.26022054,"regulation of RNA splicing"),
+c("GO:1903573","negative regulation of response to endoplasmic reticulum stress",0.009506502822571143,2.5168396481557074,0.8138665683207095,0.39891678,"regulation of RNA splicing"),
+c("GO:1903900","regulation of viral life cycle",0.024957958926978323,1.4117092966919305,0.896709893279406,0.13366223,"regulation of RNA splicing"),
+c("GO:1905897","regulation of response to endoplasmic reticulum stress",0.028729011381874323,1.8124620487307719,0.8258990933047008,0.69952682,"regulation of RNA splicing"),
+c("GO:2000765","regulation of cytoplasmic translation",0.027225519880249117,1.612605510360313,0.7974275355229034,0.56677691,"regulation of RNA splicing"),
+c("GO:2001242","regulation of intrinsic apoptotic signaling pathway",0.043229077781974413,2.44679733457022,0.8122853370975414,0.54846024,"regulation of RNA splicing"),
+c("GO:0045333","cellular respiration",1.340633795117192,1.9286580312248702,0.9511528980772241,0.09332497,"cellular respiration"),
+c("GO:0048144","fibroblast proliferation",0.0034580304537379604,1.714397171215312,0.9940753232675219,0.00707137,"fibroblast proliferation"),
+c("GO:0060586","multicellular organismal-level iron ion homeostasis",0.00353443739890252,3.413484708673666,0.9602052190709934,-0,"multicellular organismal-level iron ion homeostasis"),
+c("GO:0006878","intracellular copper ion homeostasis",0.060395993042334284,1.4187906830380292,0.9750391629817673,0.6990007,"multicellular organismal-level iron ion homeostasis"),
+c("GO:0006879","intracellular iron ion homeostasis",0.421936404379863,2.124192391772145,0.9723638109229529,0.57277816,"multicellular organismal-level iron ion homeostasis"),
+c("GO:0048708","astrocyte differentiation",0.007140352262636403,1.5037384896427068,0.9663348907429704,0.35439841,"multicellular organismal-level iron ion homeostasis"),
+c("GO:0055088","lipid homeostasis",0.18792657874248364,1.383241472958733,0.9746030624205403,0.68917294,"multicellular organismal-level iron ion homeostasis"),
+c("GO:0070328","triglyceride homeostasis",0.02314391016436169,1.4250753179113544,0.9749715626786533,0.58487921,"multicellular organismal-level iron ion homeostasis"),
+c("GO:0097084","vascular associated smooth muscle cell development",0.001094344633969818,1.5636769322562156,0.97438238273963,0.2806161,"multicellular organismal-level iron ion homeostasis"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/pathway_results_restricted_unique_genes/M_HBV_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+## Male HCV
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006403","RNA localization",0.38503431460554743,1.9601068743495047,0.9260993490014935,-0,"RNA localization"),
+c("GO:0051236","establishment of RNA localization",0.3382683346845039,1.3114099910489536,0.9260993490014935,0.48957275,"RNA localization"),
+c("GO:0009615","response to virus",0.20032422178047504,1.747397573423185,0.9733477411858901,-0,"response to virus"),
+c("GO:0010715","regulation of extracellular matrix disassembly",0.0020580580391099056,1.9601068743495047,0.9092581981168578,-0,"regulation of extracellular matrix disassembly"),
+c("GO:0045088","regulation of innate immune response",0.15728492899132876,1.557973890049974,0.8545753260849104,0.11137542,"regulation of extracellular matrix disassembly"),
+c("GO:1903053","regulation of extracellular matrix organization",0.00588579951783767,1.5348978648819827,0.9074427685549449,0.39451584,"regulation of extracellular matrix disassembly"),
+c("GO:0016072","rRNA metabolic process",1.653535024007062,2.063203856881234,0.7370641555274938,0.01325902,"rRNA metabolic process"),
+c("GO:0016236","macroautophagy",0.3184740064065498,1.4033411949623102,0.898877901881343,0.39161917,"rRNA metabolic process"),
+c("GO:0043161","proteasome-mediated ubiquitin-dependent protein catabolic process",0.7029611486951124,1.5532760767548615,0.8556317076093464,0.19031104,"rRNA metabolic process"),
+c("GO:0042254","ribosome biogenesis",2.136224808753416,2.5321362760067965,0.8285799683713246,0,"ribosome biogenesis"),
+c("GO:0022617","extracellular matrix disassembly",0.002250307772104603,1.5348978648819827,0.9282082890617632,0.22715186,"ribosome biogenesis"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/pathway_results_restricted_unique_genes/M_HCV_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+
+```

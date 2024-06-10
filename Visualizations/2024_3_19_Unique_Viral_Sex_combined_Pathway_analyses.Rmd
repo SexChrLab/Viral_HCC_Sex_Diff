@@ -1,0 +1,96 @@
+---
+title: "2024_1_26_Create_visualization_DEA_across_all_comparisons"
+output: html_document
+date: "2024-01-26"
+---
+
+**Purpose:** Create all visualizations for the differential expression analyses done in each comparison
+
+**Methods:**
+
+Extract genes significant in overall, female, and male (inclusive of the ones that are shared with othe categories), predict GO terms, Upset plot of GO terms and Treemap of unique terms to different comparisons)
+
+**Results:**
+
+
+## Libraries
+
+```{r}
+library(ggrepel)
+library(ggplot2)
+library(UpSetR)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+```
+
+## Read in files
+
+```{r}
+# HBV tumor tumor-adjacent
+tumor_adjacent_F_HBV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HBV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HBV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HBV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HBV_uf <- tumor_adjacent_M_HBV_uf[match(tumor_adjacent_F_HBV_uf$GENEID, tumor_adjacent_M_HBV_uf$GENEID),]
+identical(tumor_adjacent_F_HBV_uf$GENEID, tumor_adjacent_M_HBV_uf$GENEID)
+tumor_adjacent_F_HBV_sig <- tumor_adjacent_F_HBV_uf[which(tumor_adjacent_F_HBV_uf$adj.P.Val < 0.05 & tumor_adjacent_M_HBV_uf$adj.P.Val >0.05),]
+tumor_adjacent_M_HBV_sig <- tumor_adjacent_M_HBV_uf[which(tumor_adjacent_M_HBV_uf$adj.P.Val < 0.05 & tumor_adjacent_F_HBV_uf$adj.P.Val >0.05),]
+
+# HCV tumor tumor-adjacent
+tumor_adjacent_F_HCV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HCV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HCV_uf <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HCV_tumor_tumor_adj_p1_lfc0.csv"))
+tumor_adjacent_M_HCV_uf <- tumor_adjacent_M_HCV_uf[match(tumor_adjacent_F_HCV_uf$GENEID, tumor_adjacent_M_HCV_uf$GENEID),]
+identical(tumor_adjacent_F_HCV_uf$GENEID, tumor_adjacent_M_HCV_uf$GENEID)
+tumor_adjacent_F_HCV_sig <- tumor_adjacent_F_HCV_uf[which(tumor_adjacent_F_HCV_uf$adj.P.Val < 0.05 & tumor_adjacent_M_HCV_uf$adj.P.Val >0.05),]
+tumor_adjacent_M_HCV_sig <- tumor_adjacent_M_HCV_uf[which(tumor_adjacent_M_HCV_uf$adj.P.Val < 0.05 & tumor_adjacent_F_HCV_uf$adj.P.Val >0.05),]
+```
+
+
+### GO analysis for each list
+
+```{r}
+ego_F_HBV <- enrichGO(gene  = tumor_adjacent_F_HBV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+
+ego_F_HCV <- enrichGO(gene  = tumor_adjacent_F_HCV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+
+ego_M_HBV <- enrichGO(gene  = tumor_adjacent_M_HBV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+
+ego_M_HCV <- enrichGO(gene  = tumor_adjacent_M_HCV_sig$gene_name,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = "SYMBOL",
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+        readable      = TRUE)
+```
+
+## GO Upset plot
+
+## Print lists for revigo
+```{r}
+ego_F_HBV <- as.data.frame(ego_F_HBV)
+print(length(ego_F_HBV$ID))
+ego_F_HCV <- as.data.frame(ego_F_HCV)
+write.csv(ego_F_HCV, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/pathway_results_restricted_unique_genes/significant_pathways_F_HCV_unique.csv")
+ego_M_HBV <- as.data.frame(ego_M_HBV)
+write.csv(ego_M_HBV, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/pathway_results_restricted_unique_genes/significant_pathways_M_HBV_unique.csv")
+ego_M_HCV <- as.data.frame(ego_M_HCV)
+write.csv(ego_M_HCV, "~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/pathway_results_restricted_unique_genes/significant_pathways_M_HCV_unique.csv")
+```
+

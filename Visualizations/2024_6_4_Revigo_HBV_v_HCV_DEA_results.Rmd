@@ -1,0 +1,497 @@
+---
+title: "2024_5_30_HBV_v_HCV_tree_maps"
+output: html_document
+date: "2024-05-31"
+---
+
+## Tree maps shared HBV tumor tumor adjacent
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006936","muscle contraction",0.1261281485453547,1.6844652793933181,0.8711367982763029,-0,"muscle contraction"),
+c("GO:0003012","muscle system process",0.13514416807477272,1.620633467707579,0.8950959980467731,0.66499468,"muscle contraction"),
+c("GO:0046689","response to mercury ion",0.012170886942664326,2.291566181708834,0.9296281003179987,-0,"response to mercury ion"),
+c("GO:0007219","Notch signaling pathway",0.09692097757116025,1.847547083077164,0.9621095814690934,0.17972665,"response to mercury ion"),
+c("GO:0010038","response to metal ion",0.32910689548525657,1.6844652793933181,0.9258694873768409,0.68013969,"response to mercury ion"),
+c("GO:0061615","glycolytic process through fructose-6-phosphate",0.05521757395231043,2.291566181708834,0.3613799251415155,0,"glycolytic process through fructose-6-phosphate"),
+c("GO:0005996","monosaccharide metabolic process",1.1150509161094135,1.7834106756657675,0.39789511370162406,0.64838923,"glycolytic process through fructose-6-phosphate"),
+c("GO:0006090","pyruvate metabolic process",0.6440439997527372,1.9520779126189134,0.5678523927044562,0.5074841,"glycolytic process through fructose-6-phosphate"),
+c("GO:0016051","carbohydrate biosynthetic process",1.2946614615297933,1.8261717128629855,0.43306418048680223,0.65990968,"glycolytic process through fructose-6-phosphate"),
+c("GO:0016052","carbohydrate catabolic process",1.727161742263698,1.847547083077164,0.3948867124204994,0.47982559,"glycolytic process through fructose-6-phosphate"),
+c("GO:0044282","small molecule catabolic process",3.2393611708974914,1.6840118635200236,0.5263407603550333,0.55993567,"glycolytic process through fructose-6-phosphate"),
+c("GO:0046365","monosaccharide catabolic process",0.3414404552789164,2.1160710310326265,0.283954792560719,0.60518483,"glycolytic process through fructose-6-phosphate"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HBV_shared_tumor_adjacent_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+## HBV tumor-adjacent only
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006690","icosanoid metabolic process",0.15592932189969946,3.8053191873500554,0.8262309453348807,0.06430819,"icosanoid metabolic process"),
+c("GO:0001676","long-chain fatty acid metabolic process",0.23362532617138995,2.9147636673607322,0.6958385161382027,0.62180695,"icosanoid metabolic process"),
+c("GO:0006706","steroid catabolic process",0.09814348869379319,3.2299385345201808,0.78159776710329,0.42404477,"icosanoid metabolic process"),
+c("GO:0006720","isoprenoid metabolic process",0.7268691283111196,2.6591334963203472,0.7541190794968572,0.5424617,"icosanoid metabolic process"),
+c("GO:0006721","terpenoid metabolic process",0.42132514881854655,3.0332488047975006,0.7362207948982455,0.48224769,"icosanoid metabolic process"),
+c("GO:0006766","vitamin metabolic process",1.256768546208505,1.9763036754306358,0.8500515674747263,0.30763568,"icosanoid metabolic process"),
+c("GO:0006775","fat-soluble vitamin metabolic process",0.050263446217447064,1.5758577338319621,0.8833758262573302,0.21966687,"icosanoid metabolic process"),
+c("GO:0008202","steroid metabolic process",0.582585703698599,4.013228265733755,0.7730035417749617,0.28147178,"icosanoid metabolic process"),
+c("GO:0016042","lipid catabolic process",1.4093137798594644,2.3418714073717477,0.7505048961245635,0.55725097,"icosanoid metabolic process"),
+c("GO:0019373","epoxygenase P450 pathway",0.00861180214209582,3.589442077454057,0.7124510451966769,0.66508942,"icosanoid metabolic process"),
+c("GO:0033559","unsaturated fatty acid metabolic process",0.16936462054782891,3.9264906010552356,0.7026897109605045,0.44411784,"icosanoid metabolic process"),
+c("GO:0034308","primary alcohol metabolic process",0.347449491805084,1.9853819449389054,0.8511952538785303,0.25469054,"icosanoid metabolic process"),
+c("GO:0097267","omega-hydroxylase P450 pathway",0.00021689713466068464,4.066006836168758,0.7610946440887313,0.22927409,"icosanoid metabolic process"),
+c("GO:0006805","xenobiotic metabolic process",0.14809884239041543,4.607303046740334,0.6962765435858418,0.03870912,"xenobiotic metabolic process"),
+c("GO:0007187","G protein-coupled receptor signaling pathway, coupled to cyclic nucleotide second messenger",0.04423962125027987,1.454868505163804,0.8579445829001308,0.23778699,"xenobiotic metabolic process"),
+c("GO:0007584","response to nutrient",0.0825219655178907,2.4568684349143854,0.7610870358101158,0.6123891,"xenobiotic metabolic process"),
+c("GO:0009410","response to xenobiotic stimulus",0.16588440743259156,3.4198371328088735,0.7745804573560457,0.44563389,"xenobiotic metabolic process"),
+c("GO:0009636","response to toxic substance",1.0379415199973736,2.677993975533063,0.744603361824332,0.5247346,"xenobiotic metabolic process"),
+c("GO:0033189","response to vitamin A",0.00034999310365701385,2.23685716194491,0.8166720138985265,0.6335418,"xenobiotic metabolic process"),
+c("GO:0033273","response to vitamin",0.005370668823018543,3.1958510228358694,0.7910777404099251,0.35211989,"xenobiotic metabolic process"),
+c("GO:0046688","response to copper ion",0.024285084861496886,2.9147636673607322,0.7130395360996096,0.3879275,"xenobiotic metabolic process"),
+c("GO:0061687","detoxification of inorganic compound",0.042450219889329226,2.0436919835780776,0.7825996061931689,0.40309915,"xenobiotic metabolic process"),
+c("GO:0071280","cellular response to copper ion",0.004421743858878048,3.214965015737625,0.7093884699339479,0.62102439,"xenobiotic metabolic process"),
+c("GO:0071294","cellular response to zinc ion",0.00424921204721614,1.9853819449389054,0.7214788784339239,0.68181679,"xenobiotic metabolic process"),
+c("GO:0097501","stress response to metal ion",0.019210184858470182,2.075300168989011,0.7166726317662709,0.6750645,"xenobiotic metabolic process"),
+c("GO:0006882","intracellular zinc ion homeostasis",0.05840201824755594,1.6979589502722812,1,-0,"intracellular zinc ion homeostasis"),
+c("GO:0009404","toxin metabolic process",0.08737257416575693,2.277757694783012,0.9456802619842013,0.06156079,"toxin metabolic process"),
+c("GO:0015800","acidic amino acid transport",0.07094015147504347,2.3867120188327684,0.9436265458425815,-0,"acidic amino acid transport"),
+c("GO:0006865","amino acid transport",1.142895085771479,1.64732511673615,0.934839621366195,0.67740205,"acidic amino acid transport"),
+c("GO:0015837","amine transport",0.019952071648616388,1.9793421888459268,0.9527130703375852,0.33482737,"acidic amino acid transport"),
+c("GO:0015872","dopamine transport",0.005449540508349702,1.4646157763652423,0.9558905658476018,0.30936878,"acidic amino acid transport"),
+c("GO:0072337","modified amino acid transport",0.1475886411759295,1.5092935622109565,0.9470163641340884,0.38348691,"acidic amino acid transport"),
+c("GO:0072348","sulfur compound transport",0.31878702840770784,1.4745823135696567,0.9636014031348943,0.21130061,"acidic amino acid transport"),
+c("GO:0098810","neurotransmitter reuptake",0.015015197094919214,1.7068264542398088,0.9490269627227029,0.17108743,"acidic amino acid transport"),
+c("GO:0019748","secondary metabolic process",0.7294472465253818,1.4453319015039143,0.9594675870814957,0.04459157,"secondary metabolic process"),
+c("GO:0033013","tetrapyrrole metabolic process",0.7560861582459805,2.437110004629555,0.9168960852138388,0.07354659,"tetrapyrrole metabolic process"),
+c("GO:0006778","porphyrin-containing compound metabolic process",0.5266508903578082,1.4745823135696567,0.9192790073314727,0.23872463,"tetrapyrrole metabolic process"),
+c("GO:0140448","signaling receptor ligand precursor processing",0.024676978547986075,1.64732511673615,0.9300254829759925,0.14297889,"tetrapyrrole metabolic process"),
+c("GO:0042445","hormone metabolic process",0.380565740683504,4.607303046740334,0.8810480190712343,0,"hormone metabolic process"),
+c("GO:0050805","negative regulation of synaptic transmission",0.009639598791567474,1.4745823135696567,0.9805156080883114,0.12277126,"hormone metabolic process"),
+c("GO:0051952","regulation of amine transport",0.05209228342106329,2.075300168989011,0.9789028187360922,0.13854532,"hormone metabolic process"),
+c("GO:0042711","maternal behavior",0.0008035052943111726,2.4568684349143854,0.9218209080462398,-0,"maternal behavior"),
+c("GO:0007625","grooming behavior",0.0012101874217999564,2.1615203425397724,0.9302154387624019,0.5814589,"maternal behavior"),
+c("GO:0019098","reproductive behavior",0.01456907912476485,1.5950231949540246,0.9233825146899388,0.66505004,"maternal behavior"),
+c("GO:0050890","cognition",0.038117206676448724,1.6714209115943757,0.9583420891564745,0.31023494,"maternal behavior"),
+c("GO:0050665","hydrogen peroxide biosynthetic process",0.0007320278294798107,2.2331409661111326,0.925146348217294,0.04550886,"hydrogen peroxide biosynthetic process"),
+c("GO:0042743","hydrogen peroxide metabolic process",0.18646991730402382,1.4745823135696567,0.9137973690752276,0.62728649,"hydrogen peroxide biosynthetic process"),
+c("GO:1903409","reactive oxygen species biosynthetic process",0.0011411746971351931,1.4359978721897455,0.9246338704385703,0.64305234,"hydrogen peroxide biosynthetic process"),
+c("GO:0120254","olefinic compound metabolic process",0.16629601904041355,1.5869392307043528,0.9532288340831632,0.03908387,"olefinic compound metabolic process"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HBV_unique_tumor_adjacent_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+
+```
+
+## Tumor unique HBV
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0030148","sphingolipid biosynthetic process",0.2649571031691925,1.3463059373465933,0.5858703261612929,0.01018317,"sphingolipid biosynthetic process"),
+c("GO:0045229","external encapsulating structure organization",1.2084152736201719,1.3463059373465933,0.6690196927125106,0,"external encapsulating structure organization"),
+c("GO:0030198","extracellular matrix organization",0.25956918116500777,1.3463059373465933,0.6889455110180656,0.35390739,"external encapsulating structure organization"),
+c("GO:0043062","extracellular structure organization",0.26124520447829486,1.3463059373465933,0.6888503591975325,0.35412718,"external encapsulating structure organization"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HBV_unique_tumor_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+## HCV tumor tumor-adjacent shared
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006611","protein export from nucleus",0.046115288517061474,1.6514190874176213,0.9516366872766016,0.00594741,"protein export from nucleus"),
+c("GO:0016032","viral process",0.19404652857614818,3.973928648733339,1,-0,"viral process"),
+c("GO:0019079","viral genome replication",0.023806925269176736,4.769551078621726,0.9492764001825867,0,"viral genome replication"),
+c("GO:0032069","regulation of nuclease activity",0.00011091330749694102,1.9167993054277053,0.9201752892755749,0.08508469,"regulation of nuclease activity"),
+c("GO:0045071","negative regulation of viral genome replication",0.014152538036609673,3.731550744369185,0.7634109804055266,-0,"negative regulation of viral genome replication"),
+c("GO:0046825","regulation of protein export from nucleus",0.004692865277203904,1.8072006596478034,0.8649566703847181,0.10200704,"negative regulation of viral genome replication"),
+c("GO:0050792","regulation of viral process",0.030602213908489325,2.992106344033567,0.8965362555543795,0.11328793,"negative regulation of viral genome replication"),
+c("GO:0070269","pyroptosis",0.0043699843153794755,1.7940280413584457,0.9976144008682918,-0,"pyroptosis"),
+c("GO:0070936","protein K48-linked ubiquitination",0.051212371181587564,1.6514190874176213,1,-0,"protein K48-linked ubiquitination"),
+c("GO:0140546","defense response to symbiont",0.5606297982945379,4.142064735280571,0.6088020919746043,-0,"defense response to symbiont"),
+c("GO:0034340","response to type I interferon",0.01156456086168105,3.4275245528076126,0.6036801641257857,0.66998985,"defense response to symbiont"),
+c("GO:0044827","modulation by host of viral genome replication",0.002213336669605623,1.8823310263156487,0.6797561491040156,0.55154853,"defense response to symbiont"),
+c("GO:0051702","biological process involved in interaction with symbiont",0.014243733422773824,1.4939885578053091,0.6797310092804123,0.65222987,"defense response to symbiont"),
+c("GO:0060337","type I interferon-mediated signaling pathway",0.0090234137499178,1.5804312927876936,0.5268857327149465,0.65852265,"defense response to symbiont"),
+c("GO:0140374","antiviral innate immune response",0.010726549205037496,1.7070249026635647,0.6209540847773527,0.66647137,"defense response to symbiont"),
+c("GO:0140888","interferon-mediated signaling pathway",0.009940297091892513,1.5248302391004425,0.7452628741143934,0.19910585,"defense response to symbiont"),
+c("GO:1900246","positive regulation of RIG-I signaling pathway",0.0011855400201339695,2.196797799874442,0.7052450748386117,0.09506121,"positive regulation of RIG-I signaling pathway"),
+c("GO:0039529","RIG-I signaling pathway",0.0005989318604834814,1.8823310263156487,0.6200107603021451,0.5932022,"positive regulation of RIG-I signaling pathway"),
+c("GO:0062207","regulation of pattern recognition receptor signaling pathway",0.03611583766117059,1.440150076228524,0.6941424032055331,0.66892318,"positive regulation of RIG-I signaling pathway"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HCV_shared_tumor_adjacent_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```
+
+## HCV tumor-adjacent unique
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0001906","cell killing",0.06180828915779532,2.519942152659838,0.9960688274714277,0.00705445,"cell killing"),
+c("GO:0002377","immunoglobulin production",0.036559490891158355,56.97061622231479,0.6151595805218809,0,"immunoglobulin production"),
+c("GO:0002440","production of molecular mediator of immune response",0.036902089774315576,50.571865205971214,0.6180843936403501,0.58414568,"immunoglobulin production"),
+c("GO:0002486","antigen processing and presentation of endogenous peptide antigen via MHC class I via ER pathway, TAP-independent",0.00855757785843065,2.7567364249187483,0.6007530275229522,0.534742,"immunoglobulin production"),
+c("GO:0002548","monocyte chemotaxis",0.004187593543051173,4.772113295386326,0.548137114052904,0.51350388,"immunoglobulin production"),
+c("GO:0002685","regulation of leukocyte migration",0.05021908089444829,2.9139699311197393,0.5600993560549723,0.68284434,"immunoglobulin production"),
+c("GO:0006959","humoral immune response",0.0659958827008465,2.0978610727885174,0.5725238457243126,0.67506919,"immunoglobulin production"),
+c("GO:0016064","immunoglobulin mediated immune response",0.05364506972602047,48.3777859770337,0.555553902961498,0.59865732,"immunoglobulin production"),
+c("GO:0019882","antigen processing and presentation",0.043266048884473385,2.520880816118218,0.6173017482121133,0.60489232,"immunoglobulin production"),
+c("GO:0032606","type I interferon production",7.394220499796068E-06,1.3663093031183262,0.966320379684144,0.1483345,"immunoglobulin production"),
+c("GO:0045824","negative regulation of innate immune response",0.013881416618283817,2.4131729994296833,0.5632427261454496,0.69119509,"immunoglobulin production"),
+c("GO:0046651","lymphocyte proliferation",0.01295713905580931,2.502148110278832,0.6010194980943188,0.54789488,"immunoglobulin production"),
+c("GO:0050851","antigen receptor-mediated signaling pathway",0.06431492990722619,8.935542010773082,0.24529719009721235,0.62100784,"immunoglobulin production"),
+c("GO:0060326","cell chemotaxis",0.11796246437341326,2.7229351980719194,0.7151988638288037,0.6289474,"immunoglobulin production"),
+c("GO:0007159","leukocyte cell-cell adhesion",0.01193920136700405,1.876216447377179,0.9964281867842317,0.00621864,"leukocyte cell-cell adhesion"),
+c("GO:0070098","chemokine-mediated signaling pathway",0.05259509041504942,5.856985199745905,0.6888873719568749,0.00681492,"chemokine-mediated signaling pathway"),
+c("GO:0001819","positive regulation of cytokine production",0.12405283732507863,1.7059881247234636,0.6825741253028966,0.15270904,"chemokine-mediated signaling pathway"),
+c("GO:0002438","acute inflammatory response to antigenic stimulus",0.0010179376888052587,1.3663093031183262,0.6397442018059329,0.4877312,"chemokine-mediated signaling pathway"),
+c("GO:0002577","regulation of antigen processing and presentation",0.001491167800792207,1.5792623340525467,0.6433647813177765,0.10291566,"chemokine-mediated signaling pathway"),
+c("GO:0010560","positive regulation of glycoprotein biosynthetic process",0.0016612348722875165,1.456840232798339,0.8017122202613532,0.42780453,"chemokine-mediated signaling pathway"),
+c("GO:0019730","antimicrobial humoral response",0.02436642128699464,2.758989496463354,0.5621868529849179,0.64129162,"chemokine-mediated signaling pathway"),
+c("GO:0032069","regulation of nuclease activity",0.00011091330749694102,1.4965788013660923,0.9040914395551484,0.15936073,"chemokine-mediated signaling pathway"),
+c("GO:0034340","response to type I interferon",0.01156456086168105,1.303113684737688,0.5491573646471365,0.69209541,"chemokine-mediated signaling pathway"),
+c("GO:0042742","defense response to bacterium",0.140633144425788,3.645094804509236,0.7876080125767569,0.20309895,"chemokine-mediated signaling pathway"),
+c("GO:0043270","positive regulation of monoatomic ion transport",0.022724904336039912,1.3047541586502862,0.7811508347409822,0.38458321,"chemokine-mediated signaling pathway"),
+c("GO:0048525","negative regulation of viral process",0.018221824051664108,3.0398280513569036,0.8322357631618322,0.11885591,"chemokine-mediated signaling pathway"),
+c("GO:0050792","regulation of viral process",0.030602213908489325,1.7072079280148909,0.8815512846909717,0.12279534,"chemokine-mediated signaling pathway"),
+c("GO:0070663","regulation of leukocyte proliferation",0.0703190369530606,2.0076968369428405,0.8406431431434814,0.14653876,"chemokine-mediated signaling pathway"),
+c("GO:0071346","cellular response to type II interferon",0.007618511854956549,1.3864451714569053,0.556765186589619,0.68423979,"chemokine-mediated signaling pathway"),
+c("GO:0140374","antiviral innate immune response",0.010726549205037496,1.4554230870396667,0.5748497039278219,0.60779251,"chemokine-mediated signaling pathway"),
+c("GO:1903037","regulation of leukocyte cell-cell adhesion",0.11257207762906192,2.1960568967777503,0.82284918943954,0.14357092,"chemokine-mediated signaling pathway"),
+c("GO:0097553","calcium ion transmembrane import into cytosol",0.13611774044057923,1.3850707401193183,0.9958699563096369,0.00767674,"calcium ion transmembrane import into cytosol"),
+c("GO:1903131","mononuclear cell differentiation",0.08016813865878897,1.7931207440947725,0.983951032666509,0.00725927,"mononuclear cell differentiation"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HCV_unique_tumor_adjacent_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+
+
+```
+
+## HCV tumor unique
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006063","uronic acid metabolic process",0.07586963180824086,6.978810700930062,0.7445531860021515,0.05386107,"uronic acid metabolic process"),
+c("GO:0006066","alcohol metabolic process",1.3878680756698891,4.826813731587726,0.7081855075773172,0.26945731,"uronic acid metabolic process"),
+c("GO:0006067","ethanol metabolic process",0.01728275804819001,3.6155623520151225,0.7776988004225149,0.58352669,"uronic acid metabolic process"),
+c("GO:0006690","icosanoid metabolic process",0.15592932189969946,1.6691019134499552,0.7665307251075367,0.32767636,"uronic acid metabolic process"),
+c("GO:0006693","prostaglandin metabolic process",0.07439325244844823,1.405146204267579,0.6515704919375992,0.56942589,"uronic acid metabolic process"),
+c("GO:0006706","steroid catabolic process",0.09814348869379319,1.819084536091754,0.712322832924359,0.60076316,"uronic acid metabolic process"),
+c("GO:0006766","vitamin metabolic process",1.256768546208505,1.8103415595753871,0.7819666109401862,0.35686664,"uronic acid metabolic process"),
+c("GO:0006775","fat-soluble vitamin metabolic process",0.050263446217447064,2.66435057054297,0.8225944286471245,0.20895985,"uronic acid metabolic process"),
+c("GO:0019585","glucuronate metabolic process",0.054576741508994775,6.978810700930062,0.737858751974652,0.43323159,"uronic acid metabolic process"),
+c("GO:0033559","unsaturated fatty acid metabolic process",0.16936462054782891,1.7633985815308242,0.6403555568399779,0.54883921,"uronic acid metabolic process"),
+c("GO:0042180","cellular ketone metabolic process",0.620547631744552,1.8795828708251796,0.7796458427695118,0.32995991,"uronic acid metabolic process"),
+c("GO:0042359","vitamin D metabolic process",0.004093933416720422,3.6584744710795327,0.6927376382025351,0.52508795,"uronic acid metabolic process"),
+c("GO:0042759","long-chain fatty acid biosynthetic process",0.04469313344093403,1.7633985815308242,0.664222756223528,0.4274214,"uronic acid metabolic process"),
+c("GO:0044282","small molecule catabolic process",3.2393611708974914,1.3571041200927783,0.7105096073647115,0.40070787,"uronic acid metabolic process"),
+c("GO:0046394","carboxylic acid biosynthetic process",4.380508755890852,1.4348176807839985,0.6812818999921908,0.55076646,"uronic acid metabolic process"),
+c("GO:1901661","quinone metabolic process",0.38522409959837556,1.5499642720053364,0.7880687894218499,0.31396669,"uronic acid metabolic process"),
+c("GO:0006577","amino-acid betaine metabolic process",0.0975839926759753,2.11277024970774,0.8986034071939234,0.0620668,"amino-acid betaine metabolic process"),
+c("GO:0042219","cellular modified amino acid catabolic process",0.1246764165872281,1.884080600170819,0.8531896668586652,0.64367515,"amino-acid betaine metabolic process"),
+c("GO:0006805","xenobiotic metabolic process",0.14809884239041543,5.280668713016273,0.7233343505986815,0.06092642,"xenobiotic metabolic process"),
+c("GO:0009410","response to xenobiotic stimulus",0.16588440743259156,3.421843480274669,0.8227443010389077,0.44563389,"xenobiotic metabolic process"),
+c("GO:0046688","response to copper ion",0.024285084861496886,1.5866985758773762,0.7755160827660039,0.6750645,"xenobiotic metabolic process"),
+c("GO:0061687","detoxification of inorganic compound",0.042450219889329226,1.884080600170819,0.8248334179612558,0.40309915,"xenobiotic metabolic process"),
+c("GO:0071294","cellular response to zinc ion",0.00424921204721614,1.83192832785528,0.7747332481168732,0.59048365,"xenobiotic metabolic process"),
+c("GO:0071385","cellular response to glucocorticoid stimulus",0.022816099722204067,1.405146204267579,0.8085813470286503,0.4715024,"xenobiotic metabolic process"),
+c("GO:0097501","stress response to metal ion",0.019210184858470182,1.8994135332318713,0.7782540913219808,0.64056102,"xenobiotic metabolic process"),
+c("GO:1990169","stress response to copper ion",0.009782553721230196,2.11277024970774,0.7715118759603632,0.36552835,"xenobiotic metabolic process"),
+c("GO:0006882","intracellular zinc ion homeostasis",0.05840201824755594,1.5925986589888426,1,-0,"intracellular zinc ion homeostasis"),
+c("GO:0008202","steroid metabolic process",0.582585703698599,8.204119982655925,0.741342374820733,0,"steroid metabolic process"),
+c("GO:0001676","long-chain fatty acid metabolic process",0.23362532617138995,2.842587963176488,0.6321775762524853,0.63652248,"steroid metabolic process"),
+c("GO:0006631","fatty acid metabolic process",1.936945636803579,2.6476156301251814,0.5815610579357525,0.63577282,"steroid metabolic process"),
+c("GO:0006720","isoprenoid metabolic process",0.7268691283111196,6.496209316942819,0.7312895837957895,0.50836482,"steroid metabolic process"),
+c("GO:0006721","terpenoid metabolic process",0.42132514881854655,7.129596094720973,0.7117255786652029,0.5424617,"steroid metabolic process"),
+c("GO:0006787","porphyrin-containing compound catabolic process",0.029663147905015223,2.238340861081667,0.8373691068579635,0.17196769,"steroid metabolic process"),
+c("GO:0030258","lipid modification",0.7621839254181456,2.0943534778743134,0.7302961724542822,0.63919224,"steroid metabolic process"),
+c("GO:0033013","tetrapyrrole metabolic process",0.7560861582459805,1.304446705849444,0.8763521760985828,0.22748735,"steroid metabolic process"),
+c("GO:0033015","tetrapyrrole catabolic process",0.029668077385348424,2.238340861081667,0.8373674476820604,0.59680841,"steroid metabolic process"),
+c("GO:0042537","benzene-containing compound metabolic process",0.3046221666702652,1.8103415595753871,0.8894840275082335,0.20858259,"steroid metabolic process"),
+c("GO:0009812","flavonoid metabolic process",0.06252799328644214,2.238340861081667,0.9382615857343402,0.05302924,"flavonoid metabolic process"),
+c("GO:0019748","secondary metabolic process",0.7294472465253818,1.3571041200927783,0.94364869699627,0.04647789,"secondary metabolic process"),
+c("GO:0033687","osteoblast proliferation",0.0010894151536366206,1.5925986589888426,0.9938902110629797,-0,"osteoblast proliferation"),
+c("GO:0035115","embryonic forelimb morphogenesis",0.003075995727915164,1.6493070384381365,0.9678742665544268,-0,"embryonic forelimb morphogenesis"),
+c("GO:0007632","visual behavior",0.005247431814688609,1.3571041200927783,0.9077382231436261,0.30041924,"embryonic forelimb morphogenesis"),
+c("GO:0042445","hormone metabolic process",0.380565740683504,7.129596094720973,0.8874072016347353,0.04365614,"hormone metabolic process"),
+c("GO:0046942","carboxylic acid transport",1.7571058705477056,1.405146204267579,0.9610201961765351,-0,"carboxylic acid transport"),
+c("GO:0015849","organic acid transport",1.7778688417111328,1.405146204267579,0.9705834513481274,0.57044135,"carboxylic acid transport"),
+c("GO:0070988","demethylation",0.05492180513231859,1.3614673057857172,0.9541695026394206,0.03697702,"demethylation"),
+c("GO:0070989","oxidative demethylation",0.01750211992301729,2.1876944794646063,0.9576640814421965,0.03391191,"oxidative demethylation"),
+c("GO:0120254","olefinic compound metabolic process",0.16629601904041355,4.679853713888946,0.9335528420249186,0.05752231,"olefinic compound metabolic process"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/HCV_unique_tumor_revigo_treemap.pdf", width=9, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```

@@ -1,0 +1,185 @@
+---
+title: "2024_1_26_Viral_Sex_combined_DEA_Tumor_TumorAdj"
+output: html_document
+date: "2024-01-26"
+---
+
+**Purpose:**
+
+* Identify viral and sex-stratified tumor/tumor-adjacent differentially expressed genes with only library type as a covariate
+
+**Methods:**
+
+* Limma voom pipeline on all tumor-tumor-adjcent comparison
+
+* Only covariate is library type
+
+**Results:**
+
+## Load libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(edgeR)
+library(DESeq2)
+library(limma)
+library(ggplot2)
+library(dplyr)
+```
+
+## Read in data
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+
+## Create DEG list object
+```{r}
+dge <- DGEList(counts=tumorAdjacentExp, genes=genes)
+
+colnames(dge) <- colnames(tumorAdjacentExp)
+dge$samples$ID <- metadata$ID
+dge$samples$tumor <- factor(metadata$tumor)
+dge$samples$library_type <- metadata$libtype
+dge$samples$viral <- metadata$Virus_infection
+dge$samples$gender_tussue <- metadata$gender_tissue
+dge$samples$gender_tissue_viral <- metadata$gender_tissue_viral
+```
+
+## Filtering by FPKM expression level
+```{r}
+# Keeping genes that have a mean FPKM of at least 0.5 in at least one of the
+# groups under investigation and at least 6 reads in at least 10 samples
+fpkm <- rpkm(dge, gene.length=dge$genes$length)
+
+M_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HBV")],1,mean,na.rm=TRUE)
+M_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HBV")],1,mean,na.rm=TRUE)
+M_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HCV")],1,mean,na.rm=TRUE)
+M_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HCV")],1,mean,na.rm=TRUE)
+
+F_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HBV")],1,mean,na.rm=TRUE)
+F_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HBV")],1,mean,na.rm=TRUE)
+F_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HCV")],1,mean,na.rm=TRUE)
+F_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HCV")],1,mean,na.rm=TRUE)
+
+keep <- (M_1_HBV_mean_fpkm > 0.5 | M_0_HBV_mean_fpkm > 0.5 | 
+           M_1_HCV_mean_fpkm > 0.5 | M_0_HCV_mean_fpkm > 0.5 |
+           F_1_HBV_mean_fpkm > 0.5 | F_0_HBV_mean_fpkm > 0.5 |
+           F_1_HCV_mean_fpkm > 0.5 | F_0_HCV_mean_fpkm > 0.5 )
+
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+keep <- rowSums(dge$counts > 6) >= 10
+dge <- dge[keep,,keep.lib.size=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+
+# N of genes retained after filtering
+dim(dge$genes)
+```
+
+## Create design matrix
+```{r}
+design <- model.matrix(~0+dge$samples$gender_tissue_viral+dge$samples$library_type)
+colnames(design) <- gsub("dge\\$samples\\$gender_tissue_viral", "", colnames(design))
+colnames(design) <- gsub("dge\\$samples\\$library_typeunstranded", "library_type", colnames(design))
+head(design)
+```
+
+## Voom analysis
+```{r}
+v <- voomWithQualityWeights(dge, design, plot=TRUE)
+```
+
+# DEA
+```{r}
+# Block design for individual. This is used in tumor-normal comparisons with
+# paired samples.
+corfit <- duplicateCorrelation(v, design, block = v$targets$ID)
+# This should give a positive correlation value. It represents the
+# correlation between measurements made on the same person.
+corfit$consensus
+
+# Fitting the linear model with limma.
+# If using paired samples, the within-patient correlation and a block design
+# for patient is used to account for pairwise samples
+fit <- lmFit(v, design, block = v$targets$ID, correlation = corfit$consensus)
+
+# Contrast design for differential expression
+# Defining pairwise comparisons
+contrasts <- makeContrasts(F_1_HBV - F_0_HBV,
+                           F_1_HCV - F_0_HCV,
+                           M_1_HBV - M_0_HBV,
+                           M_1_HCV - M_0_HCV,
+                           levels=colnames(design))
+head(contrasts)
+
+# Running contrast analysis
+vfit <- contrasts.fit(fit, contrasts = contrasts)
+
+# Computing differential expression based on the empirical Bayes moderation of
+# the standard errors towards a common value. Robust = should the estimation of
+# the empirical Bayes prior parameters be robustified against outlier sample
+# variances?
+veBayesFit <- eBayes(vfit, robust=TRUE)
+# Look at N of DEGs with adj. p <0.01 and log2FC>2
+summary(decideTests(veBayesFit, adjust.method = "BH", p.value = 0.05, lfc = 2))
+
+plotSA(veBayesFit, main = "Final model: Mean-variance trend")
+
+## Female HBV (coef 1)
+vTopTable_female_HBV <- topTable(veBayesFit, n=Inf, p.value=1, lfc=0, coef = 1)
+write.csv(vTopTable_female_HBV, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HBV_tumor_tumor_adj_p1_lfc0.csv")
+
+DEGs_female_HBV <- topTable(veBayesFit, n=Inf, p.value=0.05, lfc=2, coef=1)
+DEGs_female_HBV_print <- data.frame(DEGs_female_HBV$GENEID, DEGs_female_HBV$gene_name, DEGs_female_HBV$adj.P.Val, DEGs_female_HBV$logFC)
+write.csv(DEGs_female_HBV_print, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HBV_tumor_tumor_adj_p0.05_lfc2.csv")
+
+## Female HCV (coef 2)
+vTopTable_female_HCV <- topTable(veBayesFit, n=Inf, p.value=1, lfc=0, coef = 2)
+write.csv(vTopTable_female_HCV, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HCV_tumor_tumor_adj_p1_lfc0.csv")
+
+DEGs_female_HCV <- topTable(veBayesFit, n=Inf, p.value=0.05, lfc=2, coef=2)
+DEGs_female_HCV_print <- data.frame(DEGs_female_HCV$GENEID, DEGs_female_HCV$gene_name, DEGs_female_HCV$adj.P.Val, DEGs_female_HCV$logFC)
+write.csv(DEGs_female_HCV_print, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/female_HCV_tumor_tumor_adj_p0.05_lfc2.csv")
+
+## Male HBV (coef 3)
+vTopTable_male_HBV <- topTable(veBayesFit, n=Inf, p.value=1, lfc=0, coef = 3)
+write.csv(vTopTable_male_HBV, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HBV_tumor_tumor_adj_p1_lfc0.csv")
+
+DEGs_male_HBV <- topTable(veBayesFit, n=Inf, p.value=0.05, lfc=2, coef=3)
+DEGs_male_HBV_print <- data.frame(DEGs_male_HBV$GENEID, DEGs_male_HBV$gene_name, DEGs_male_HBV$adj.P.Val, DEGs_male_HBV$logFC)
+write.csv(DEGs_male_HBV_print, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HBV_tumor_tumor_adj_p0.05_lfc2.csv")
+
+## Male HCV (coef 4) 
+vTopTable_male_HCV <- topTable(veBayesFit, n=Inf, p.value=1, lfc=0, coef = 4)
+write.csv(vTopTable_male_HCV, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HCV_tumor_tumor_adj_p1_lfc0.csv")
+
+DEGs_male_HCV <- topTable(veBayesFit, n=Inf, p.value=0.05, lfc=2, coef=4)
+DEGs_male_HCV_print <- data.frame(DEGs_male_HCV$GENEID, DEGs_male_HCV$gene_name, DEGs_male_HCV$adj.P.Val, DEGs_male_HCV$logFC)
+write.csv(DEGs_male_HCV_print, "~/3.0 Hasting Research/Liver Cancer Analysis/DEGs/male_HCV_tumor_tumor_adj_p0.05_lfc2.csv")
+```
+
+**Interpretation:**
+
+* Model fit looks good before and after voom adjustment
+
+* Positive correlation for samples from the same patient
+
+* DEG lists saved
+
+

@@ -1,0 +1,287 @@
+---
+title: "2024_3_23_Immune_deconvolution"
+output: html_document
+date: "2024-03-23"
+---
+
+**Purpose:** Visualize immune deconvolution data and expand to include categorization by immune hot, immune cold, and immune excluded. Check for frequency of each of these populations between HCV and HBV. Consider adding survival
+
+**Methods:**
+
+* Immune deconvolution on matched data
+
+* Characterize as increase in immune infiltration, steady immune infiltration, or decrease in immune infiltration
+
+* Determine the proportions of each in HBV vs. HCV
+
+* Check for an association with survival
+
+```{r, message=FALSE, warning=FALSE}
+library(DGEobj.utils)
+library(immunedeconv)
+library(pheatmap)
+library(ggplot2)
+library(survminer)
+library(survival)
+```
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+
+## Restrict to paried data
+
+```{r}
+adjacent <- metadata[which(metadata$tumor==0),]
+tumor <- metadata[which(metadata$tumor==1),]
+
+tumor <- tumor[which(tumor$ID %in% adjacent$ID),]
+adjacent <- adjacent[match(tumor$ID, adjacent$ID),]
+identical(tumor$ID, adjacent$ID)
+
+metadata <- rbind(tumor, adjacent)
+
+tumorAdjacentExp <- tumorAdjacentExp[, which(colnames(tumorAdjacentExp) %in% metadata$sampleid)]
+```
+
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+
+## Converting to TPM
+
+```{r}
+tumorAdjacentExp <- as.matrix(tumorAdjacentExp)
+expression_tpm <- convertCounts(tumorAdjacentExp, unit="TPM", geneLength = genes$length)
+row.names(expression_tpm) <- genes$gene_name
+```
+
+
+
+## Run Xcell
+```{r}
+res_xcell <- deconvolute(expression_tpm, "xcell", tumor=TRUE)
+```
+
+```{r}
+res_xcell_heatmap <- as.data.frame(res_xcell)
+row.names(res_xcell_heatmap) <- res_xcell_heatmap$cell_type
+res_xcell_heatmap <- res_xcell_heatmap[,-1]
+res_xcell_heatmap <- res_xcell_heatmap[which(rowSums(res_xcell_heatmap>0.05)>10),]
+
+res_xcell_heatmap <- res_xcell_heatmap[,match(metadata$sampleid, colnames(res_xcell_heatmap))]
+
+identical(metadata$sampleid, colnames(res_xcell_heatmap))
+
+metadata$virus_tumor <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+annotation <- as.data.frame(metadata[,c(4,104)])
+row.names(annotation) <- colnames(res_xcell_heatmap)
+
+annotation <- annotation[order(annotation$Gender),]
+annotation <- annotation[order(annotation$virus_tumor),]
+res_xcell_heatmap <- res_xcell_heatmap[,match(row.names(annotation), colnames(res_xcell_heatmap))]
+identical(row.names(annotation), colnames(res_xcell_heatmap))
+
+pheatmap(res_xcell_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F)
+
+#pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/xcell_heatmap.pdf")
+#pheatmap(res_xcell_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F)
+#dev.off()
+```
+
+## Boxplots
+
+```{r}
+res_xcell_boxplots <- as.data.frame(t(res_xcell_heatmap))
+res_xcell_boxplots <- res_xcell_boxplots[match(metadata$sampleid, row.names(res_xcell_boxplots)),]
+identical(metadata$sampleid, rownames(res_xcell_boxplots))
+res_xcell_boxplots$viral_tissue <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+res_xcell_boxplots$viral_tissue_gender <- paste(metadata$Virus_infection, metadata$tumor, metadata$Gender, sep="_")
+
+HBV_tumor <- res_xcell_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="1"),]
+HBV_adjacent <- res_xcell_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="0"),]
+HCV_tumor <- res_xcell_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="1"),]
+HCV_adjacent <- res_xcell_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="0"),]
+
+res_xcell_boxplots_plot <- res_xcell_boxplots[,which(colnames(res_xcell_boxplots) %in% c("viral_tissue", "T cell CD8+"))]
+res_xcell_boxplots_plot$patient <- rownames(res_xcell_boxplots_plot)
+res_xcell_boxplots_plot$patient <- gsub("-.*", "",res_xcell_boxplots_plot$patient)
+res_xcell_boxplots_plot$viral_tissue <- factor(res_xcell_boxplots_plot$viral_tissue, levels=c("HBV_0", "HBV_1", "HCV_0", "HCV_1"))
+ggpaired(res_xcell_boxplots_plot, x="viral_tissue", y="`T cell CD8+`", fill="viral_tissue", line.color="black", line.size=1)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/CD8_xcell_paired.pdf")
+ggpaired(res_xcell_boxplots_plot, x="viral_tissue", y="`T cell CD8+`", fill="viral_tissue", line.color="black", line.size=1)
+dev.off()
+
+res_xcell_boxplots_plot <- res_xcell_boxplots[,which(colnames(res_xcell_boxplots) %in% c("viral_tissue", "immune score"))]
+res_xcell_boxplots_plot$patient <- rownames(res_xcell_boxplots_plot)
+res_xcell_boxplots_plot$patient <- gsub("-.*", "",res_xcell_boxplots_plot$patient)
+res_xcell_boxplots_plot$viral_tissue <- factor(res_xcell_boxplots_plot$viral_tissue, levels=c("HBV_0", "HBV_1", "HCV_0", "HCV_1"))
+ggpaired(res_xcell_boxplots_plot, x="viral_tissue", y="immune score", fill="viral_tissue", line.color="black", line.size=1)
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Immune deconvolution/immune_xcell_paired.pdf")
+ggpaired(res_xcell_boxplots_plot, x="viral_tissue", y="immune score", fill="viral_tissue", line.color="black", line.size=1)
+dev.off()
+```
+
+
+## Quantify change
+
+```{r}
+adjacent_immune_data <- res_xcell_boxplots_plot[which(rownames(res_xcell_boxplots_plot) %in% adjacent$sampleid),]
+tumor_immune_data <- res_xcell_boxplots_plot[which(rownames(res_xcell_boxplots_plot) %in% tumor$sampleid),]
+
+adjacent_immune_data <- adjacent_immune_data[match(tumor_immune_data$patient, adjacent_immune_data$patient),]
+identical(tumor_immune_data$patient, adjacent_immune_data$patient)
+
+adjacent_immune_data$difference <- tumor_immune_data$`immune score` - adjacent_immune_data$`immune score`
+adjacent_immune_data$tumor_infiltrate <- tumor_immune_data$`immune score`
+
+quantile(adjacent_immune_data$tumor_infiltrate)
+quantile(adjacent_immune_data$`immune score`)
+quantile(c(adjacent_immune_data$tumor_infiltrate, adjacent_immune_data$`immune score`))
+adjacent_immune_data$category <- "NA"
+adjacent_immune_data[which(adjacent_immune_data$`immune score` < 9.381456e-02 & adjacent_immune_data$tumor_infiltrate < 9.381456e-02),6] <- "Immune cold"
+adjacent_immune_data[which(adjacent_immune_data$`immune score` > 9.381456e-02 & adjacent_immune_data$tumor_infiltrate > 9.381456e-02),6] <- "Immune hot"
+adjacent_immune_data[which(adjacent_immune_data$`immune score` < 9.381456e-02 & adjacent_immune_data$tumor_infiltrate > 9.381456e-02),6] <- "Immune enriched"
+adjacent_immune_data[which(adjacent_immune_data$`immune score` > 9.381456e-02 & adjacent_immune_data$tumor_infiltrate < 9.381456e-02),6] <- "Immune excluded"
+
+table(adjacent_immune_data$viral_tissue, adjacent_immune_data$category)
+
+adjacent_immune_data$tumor_infiltrate_category <- "Low"
+adjacent_immune_data[which(adjacent_immune_data$tumor_infiltrate > 1.435380e-02), 7] <- "intermediate low"
+adjacent_immune_data[which(adjacent_immune_data$tumor_infiltrate > 4.644642e-02), 7] <- "intermediate high"
+adjacent_immune_data[which(adjacent_immune_data$tumor_infiltrate > 1.117166e-01), 7] <- "high"
+
+adjacent_immune_data$adj_infiltrate_category <- "low"
+adjacent_immune_data[which(adjacent_immune_data$`immune score` > 0.17572890), 8] <- "high"
+```
+
+## Test survival split by immune infiltration
+
+```{r}
+HCC_metadata <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Additional metadata/ICGC_japan_HCC_WGS_samples_info.csv"))
+
+HCC_metadata_subset <- HCC_metadata[which(HCC_metadata$submitted_donor_id %in% metadata$ID),]
+
+adjacent_immune_data <- adjacent_immune_data[match(HCC_metadata_subset$submitted_donor_id, adjacent_immune_data$patient),]
+identical(HCC_metadata_subset$submitted_donor_id, adjacent_immune_data$patient)
+HCC_metadata_subset$immune_category <- adjacent_immune_data$category
+HCC_metadata_subset$tumor_only_immune_category <- adjacent_immune_data$tumor_infiltrate_category
+HCC_metadata_subset$adj_only_immune_category <- adjacent_immune_data$adj_infiltrate_category
+
+for (i in 1:length(HCC_metadata_subset$donor_vital_status)){
+  if (HCC_metadata_subset$donor_vital_status[i] == "deceased"){
+    HCC_metadata_subset$donor_vital_status[i] = 1
+  }
+  if (HCC_metadata_subset$donor_vital_status[i] == "alive"){
+    HCC_metadata_subset$donor_vital_status[i] =0
+  }
+}
+
+table(HCC_metadata_subset$donor_vital_status)
+
+ggsurvplot(survfit(Surv(donor_survival_time, as.numeric(donor_vital_status))~ immune_category, data=HCC_metadata_subset), pval=TRUE)
+ggsurvplot(survfit(Surv(donor_survival_time, as.numeric(donor_vital_status))~ tumor_only_immune_category, data=HCC_metadata_subset), pval=TRUE)
+ggsurvplot(survfit(Surv(donor_survival_time, as.numeric(donor_vital_status))~ adj_only_immune_category, data=HCC_metadata_subset), pval=TRUE)
+```
+
+## Check genes associated with immune excluded category - in adjacent tissue
+
+```{r}
+expression_tpm_adj <- expression_tpm[,which(colnames(expression_tpm) %in% adjacent$sampleid)]
+expression_tpm_adj <- t(expression_tpm_adj)
+rownames(expression_tpm_adj) <- gsub("-.*", "", rownames(expression_tpm_adj))
+expression_tpm_adj <- expression_tpm_adj[match(adjacent_immune_data$patient, rownames(expression_tpm_adj)),]
+identical(adjacent_immune_data$patient, rownames(expression_tpm_adj))
+expression_tpm_adj <- as.data.frame(expression_tpm_adj)
+
+adjacent_immune_data$LAG3_expression <- expression_tpm_adj$LAG3
+adjacent_immune_data$CTLA4_expression <- expression_tpm_adj$CTLA4
+adjacent_immune_data$PD1_expression <- expression_tpm_adj$PDCD1
+adjacent_immune_data$PDL1_expression <- expression_tpm_adj$CD274
+adjacent_immune_data$HAVCR2_expression <- expression_tpm_adj$HAVCR2
+adjacent_immune_data$GZMB_expression <- expression_tpm_adj$GZMB
+adjacent_immune_data$CCR8_expression <- expression_tpm_adj$CCR8
+adjacent_immune_data$CCR4_expression <- expression_tpm_adj$CCR4
+adjacent_immune_data$IRF4_expression <- expression_tpm_adj$IRF4
+
+ggplot(adjacent_immune_data, aes(x=category, y=LAG3_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=CTLA4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=PD1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=PDL1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=HAVCR2_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=GZMB_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=CCR4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=IRF4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+
+high <- adjacent_immune_data[which(adjacent_immune_data$adj_infiltrate_category=="high"),]
+low <- adjacent_immune_data[which(adjacent_immune_data$adj_infiltrate_category=="low"),]
+
+ggplot(adjacent_immune_data, aes(x=adj_infiltrate_category, y=LAG3_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$LAG3_expression, low$LAG3_expression)
+ggplot(adjacent_immune_data, aes(x=adj_infiltrate_category, y=CTLA4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$CTLA4_expression, low$CTLA4_expression)
+ggplot(adjacent_immune_data, aes(x=adj_infiltrate_category, y=PD1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$PD1_expression, low$PD1_expression)
+ggplot(adjacent_immune_data, aes(x=adj_infiltrate_category, y=PDL1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$PDL1_expression, low$PDL1_expression)
+ggplot(adjacent_immune_data, aes(x=adj_infiltrate_category, y=HAVCR2_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$PDL1_expression, low$HAVCR2_expression)
+ggplot(adjacent_immune_data, aes(x=adj_infiltrate_category, y=GZMB_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$GZMB_expression, low$GZMB_expression)
+```
+
+```{r}
+expression_tpm_tumor <- expression_tpm[,which(colnames(expression_tpm) %in% tumor$sampleid)]
+expression_tpm_tumor <- t(expression_tpm_tumor)
+rownames(expression_tpm_tumor) <- gsub("-.*", "", rownames(expression_tpm_tumor))
+expression_tpm_tumor <- expression_tpm_tumor[match(adjacent_immune_data$patient, rownames(expression_tpm_tumor)),]
+identical(adjacent_immune_data$patient, rownames(expression_tpm_tumor))
+expression_tpm_tumor <- as.data.frame(expression_tpm_tumor)
+
+adjacent_immune_data$LAG3_expression <- expression_tpm_tumor$LAG3
+adjacent_immune_data$CTLA4_expression <- expression_tpm_tumor$CTLA4
+adjacent_immune_data$PD1_expression <- expression_tpm_tumor$PDCD1
+adjacent_immune_data$PDL1_expression <- expression_tpm_tumor$CD274
+adjacent_immune_data$HAVCR2_expression <- expression_tpm_tumor$HAVCR2
+adjacent_immune_data$GZMB_expression <- expression_tpm_tumor$GZMB
+adjacent_immune_data$CCR8_expression <- expression_tpm_tumor$CCR8
+adjacent_immune_data$CCR4_expression <- expression_tpm_tumor$CCR4
+adjacent_immune_data$IRF4_expression <- expression_tpm_tumor$IRF4
+
+ggplot(adjacent_immune_data, aes(x=category, y=LAG3_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=CTLA4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=PD1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=PDL1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=HAVCR2_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=CCR4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+ggplot(adjacent_immune_data, aes(x=category, y=IRF4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+
+high <- adjacent_immune_data[which(adjacent_immune_data$tumor_infiltrate_category=="high"),]
+low <- adjacent_immune_data[which(adjacent_immune_data$tumor_infiltrate_category=="Low"),]
+
+ggplot(adjacent_immune_data, aes(x=tumor_infiltrate_category, y=LAG3_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$LAG3_expression, low$LAG3_expression)
+ggplot(adjacent_immune_data, aes(x=tumor_infiltrate_category, y=CTLA4_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$CTLA4_expression, low$CTLA4_expression)
+ggplot(adjacent_immune_data, aes(x=tumor_infiltrate_category, y=PD1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$PD1_expression, low$PD1_expression)
+ggplot(adjacent_immune_data, aes(x=tumor_infiltrate_category, y=PDL1_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$PDL1_expression, low$PDL1_expression)
+ggplot(adjacent_immune_data, aes(x=tumor_infiltrate_category, y=HAVCR2_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$PDL1_expression, low$HAVCR2_expression)
+ggplot(adjacent_immune_data, aes(x=tumor_infiltrate_category, y=GZMB_expression)) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+t.test(high$GZMB_expression, low$GZMB_expression)
+```

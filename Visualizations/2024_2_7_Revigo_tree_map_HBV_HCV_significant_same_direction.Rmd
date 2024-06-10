@@ -1,0 +1,133 @@
+---
+title: "2024_2_7_Revigo_tree_map_HBV_HCV_significant_same_direction"
+output: html_document
+date: "2024-02-08"
+---
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006882","intracellular zinc ion homeostasis",0.017336053883063196,3.511807583203201,1,-0,"intracellular zinc ion homeostasis"),
+c("GO:0006910","phagocytosis, recognition",0.00187596592287944,1.423393649749774,0.9831655804999752,0.0054192,"phagocytosis, recognition"),
+c("GO:0015671","oxygen transport",0.0670424984779397,1.353124570557179,0.9779136627074535,0.19685758,"phagocytosis, recognition"),
+c("GO:0015850","organic hydroxy compound transport",0.12233692667288262,1.386617261784238,0.9824538609625382,0.15683457,"phagocytosis, recognition"),
+c("GO:0007088","regulation of mitotic nuclear division",0.04961996389630406,5.892790030352131,0.6590279594254814,-0,"regulation of mitotic nuclear division"),
+c("GO:0031915","positive regulation of synaptic plasticity",0.0010510731057267785,1.6793206485861256,0.878630972782553,0.42365684,"regulation of mitotic nuclear division"),
+c("GO:0042445","hormone metabolic process",0.1301867131586902,2.6832888390598746,0.8567315668438475,0.15844462,"regulation of mitotic nuclear division"),
+c("GO:0044058","regulation of digestive system process",0.004260837495050643,1.8393214555985442,0.8974322595101011,0.13205779,"regulation of mitotic nuclear division"),
+c("GO:0045723","positive regulation of fatty acid biosynthetic process",0.003040129172893277,2.5869023388635983,0.8136028681545171,0.14048431,"regulation of mitotic nuclear division"),
+c("GO:0045807","positive regulation of endocytosis",0.019584552045947064,1.3296808798323128,0.7353281328891724,0.59421952,"regulation of mitotic nuclear division"),
+c("GO:0045907","positive regulation of vasoconstriction",0.004370601458623376,1.3072977345631998,0.7822414403080716,0.69453037,"regulation of mitotic nuclear division"),
+c("GO:0045926","negative regulation of growth",0.035437129330421195,2.1333434607750115,0.8529547767058971,0.15004305,"regulation of mitotic nuclear division"),
+c("GO:0051302","regulation of cell division",0.08931460454106156,1.7334226991636497,0.884906450577704,0.17294482,"regulation of mitotic nuclear division"),
+c("GO:0051988","regulation of attachment of spindle microtubules to kinetochore",0.007177897981513886,2.8241615739143193,0.7352243582579565,0.67091712,"regulation of mitotic nuclear division"),
+c("GO:0062012","regulation of small molecule metabolic process",0.08445172833671806,1.7885962981217443,0.8864699306683925,0.20281086,"regulation of mitotic nuclear division"),
+c("GO:0090235","regulation of metaphase plate congression",0.0019624466214518965,1.5037693260220075,0.9004454099123765,0.12650787,"regulation of mitotic nuclear division"),
+c("GO:1902412","regulation of mitotic cytokinesis",0.005787554442925932,1.6793206485861256,0.7380279185497568,0.66259923,"regulation of mitotic nuclear division"),
+c("GO:1903027","regulation of opsonization",0.0010344422021551522,2.8241615739143193,0.8785410995952883,0.13254998,"regulation of mitotic nuclear division"),
+c("GO:1904478","regulation of intestinal absorption",0.001513412225017988,1.5934741770680043,0.890631560800956,0.659724,"regulation of mitotic nuclear division"),
+c("GO:2000630","positive regulation of miRNA metabolic process",0.008315451785813121,1.5934741770680043,0.824360354167064,0.45347301,"regulation of mitotic nuclear division"),
+c("GO:0007586","digestion",0.023679080505281443,3.908491316194293,0.9589755141102342,-0,"digestion"),
+c("GO:0003014","renal system process",0.01325150396587179,1.3356731056149518,0.9530708642368808,0.53329843,"digestion"),
+c("GO:0003094","glomerular filtration",0.0027075111014607522,1.473907526276994,0.9522873609880801,0.48949462,"digestion"),
+c("GO:0022600","digestive system process",0.014811482720890331,2.338516424297878,0.9490286486960114,0.42582547,"digestion"),
+c("GO:0034372","very-low-density lipoprotein particle remodeling",0.0014768242371604103,2.6959668423879783,0.8275544214231757,0.37540556,"digestion"),
+c("GO:0016064","immunoglobulin mediated immune response",0.020562449175958685,37.06098022355133,0.7876962143714933,0,"immunoglobulin mediated immune response"),
+c("GO:0002377","immunoglobulin production",0.0051622324686327855,35.98716277529483,0.891046015448717,0.56652624,"immunoglobulin mediated immune response"),
+c("GO:0002440","production of molecular mediator of immune response",0.005531438527922888,28.148741651280925,0.8906698131860904,0.5686657,"immunoglobulin mediated immune response"),
+c("GO:0002526","acute inflammatory response",0.015809336935187903,3.415953874944665,0.868739729754214,0.57908502,"immunoglobulin mediated immune response"),
+c("GO:0006959","humoral immune response",0.040652580690483185,8.863279432843592,0.8032851633591808,0.67465252,"immunoglobulin mediated immune response"),
+c("GO:0008228","opsonization",0.00030600862571792287,2.1626701954755774,0.896575094245492,0.6987096,"immunoglobulin mediated immune response"),
+c("GO:0009410","response to xenobiotic stimulus",0.07745344411377773,6.0034883278458215,0.8191589971391663,0.54646124,"immunoglobulin mediated immune response"),
+c("GO:0009636","response to toxic substance",0.9843465944166997,6.0034883278458215,0.786595971175881,0.53725454,"immunoglobulin mediated immune response"),
+c("GO:0010273","detoxification of copper ion",0.0006486052392934234,5.844663962534939,0.8072518741986623,0.33346751,"immunoglobulin mediated immune response"),
+c("GO:0014074","response to purine-containing compound",0.024091526913857773,1.512652138576958,0.8078819193868749,0.64554211,"immunoglobulin mediated immune response"),
+c("GO:0019730","antimicrobial humoral response",0.009226825301538238,6.782516055786093,0.7916186726418459,0.61838373,"immunoglobulin mediated immune response"),
+c("GO:0042742","defense response to bacterium",0.10597876991983106,4.496209316942819,0.8526451227375533,0.23039021,"immunoglobulin mediated immune response"),
+c("GO:0043627","response to estrogen",0.006605794898649943,1.4470674799604148,0.8262449079952594,0.49135521,"immunoglobulin mediated immune response"),
+c("GO:0046683","response to organophosphorus",0.022255475159550234,1.797899806075544,0.8177637587587339,0.52658964,"immunoglobulin mediated immune response"),
+c("GO:0046686","response to cadmium ion",0.007886374473665164,4.838631997765025,0.8042951527397972,0.69938237,"immunoglobulin mediated immune response"),
+c("GO:0050853","B cell receptor signaling pathway",0.010677040092984046,5.481486060122113,0.657107442228671,0.58987335,"immunoglobulin mediated immune response"),
+c("GO:0061687","detoxification of inorganic compound",0.014043134975881198,4.906578314837765,0.8272320311492528,0.44278498,"immunoglobulin mediated immune response"),
+c("GO:0071276","cellular response to cadmium ion",0.0040645928329054535,5.481486060122113,0.7951022987932888,0.62017184,"immunoglobulin mediated immune response"),
+c("GO:0071377","cellular response to glucagon stimulus",0.004161052073620886,1.5934741770680043,0.8097714537933105,0.55064278,"immunoglobulin mediated immune response"),
+c("GO:0071466","cellular response to xenobiotic stimulus",0.06329056663218083,6.732828271596986,0.7963468195271822,0.20656202,"immunoglobulin mediated immune response"),
+c("GO:0097305","response to alcohol",0.07258058936729124,1.6364424137276894,0.8002059638815969,0.65055423,"immunoglobulin mediated immune response"),
+c("GO:0097501","stress response to metal ion",0.0028339059686051118,5.033389013318065,0.8058830478304589,0.664604,"immunoglobulin mediated immune response"),
+c("GO:0098754","detoxification",0.953290045087045,5.104577453960592,0.7759061779734556,0.69437551,"immunoglobulin mediated immune response"),
+c("GO:1901654","response to ketone",0.01978079670809225,1.8393214555985442,0.814326279177452,0.40517479,"immunoglobulin mediated immune response"),
+c("GO:1904628","cellular response to phorbol 13-acetate 12-myristate",0.0005721030828639427,1.7885962981217443,0.8248791645428205,0.49760345,"immunoglobulin mediated immune response"),
+c("GO:0019373","epoxygenase P450 pathway",0.0009645924071543221,6.782516055786093,0.8772399724342729,-0,"epoxygenase P450 pathway"),
+c("GO:0001676","long-chain fatty acid metabolic process",0.059897862303569076,3.342226337247427,0.8699321238170192,0.59075732,"epoxygenase P450 pathway"),
+c("GO:0006631","fatty acid metabolic process",1.0749284738099192,2.1658034322944246,0.8477573726238338,0.68529574,"epoxygenase P450 pathway"),
+c("GO:0006690","icosanoid metabolic process",0.04095193695477246,3.498959918403737,0.9371140416160758,0.23154222,"epoxygenase P450 pathway"),
+c("GO:0006720","isoprenoid metabolic process",0.5931910685927647,2.1929498664613294,0.8874060010942699,0.61076577,"epoxygenase P450 pathway"),
+c("GO:0006721","terpenoid metabolic process",0.3306922127989305,3.0706025340726475,0.8823308233827903,0.5053537,"epoxygenase P450 pathway"),
+c("GO:0008202","steroid metabolic process",0.25984788976451706,4.539102157243452,0.9055180329474629,0.33680709,"epoxygenase P450 pathway"),
+c("GO:0008300","isoprenoid catabolic process",0.012423284968004803,1.7885962981217443,0.8874502655604087,0.69322846,"epoxygenase P450 pathway"),
+c("GO:0016042","lipid catabolic process",0.6020586663771559,2.6019227759505688,0.8836485607945289,0.54458279,"epoxygenase P450 pathway"),
+c("GO:0016125","sterol metabolic process",0.14975130812035134,3.9574638632778565,0.8727822028936933,0.47321479,"epoxygenase P450 pathway"),
+c("GO:0033559","unsaturated fatty acid metabolic process",0.04260837495050643,3.851641087330166,0.8727517823942732,0.46444592,"epoxygenase P450 pathway"),
+c("GO:0042180","cellular ketone metabolic process",0.46003407605618213,2.0037365858268896,0.9374633039829816,0.24289036,"epoxygenase P450 pathway"),
+c("GO:0044282","small molecule catabolic process",1.5882113769217343,1.4052173344973418,0.9134799883725205,0.56913748,"epoxygenase P450 pathway"),
+c("GO:0046394","carboxylic acid biosynthetic process",4.148369346557163,2.1929498664613294,0.9014734519345715,0.40792445,"epoxygenase P450 pathway"),
+c("GO:1901616","organic hydroxy compound catabolic process",0.1460958355153079,2.4974614527083863,0.9329880651535216,0.6712524,"epoxygenase P450 pathway"),
+c("GO:1902652","secondary alcohol metabolic process",0.11039926408916932,2.88908317708088,0.9237667424335362,0.65712629,"epoxygenase P450 pathway"),
+c("GO:0042537","benzene-containing compound metabolic process",0.19396290217516252,1.5795641179615048,0.9717977222804698,0.05575848,"benzene-containing compound metabolic process"),
+c("GO:0042744","hydrogen peroxide catabolic process",0.1277353179722325,2.1333434607750115,0.9460371706334975,0.03952039,"hydrogen peroxide catabolic process"),
+c("GO:0070989","oxidative demethylation",0.006120172514358457,2.4542864949087755,0.9927410615536204,0.0138674,"oxidative demethylation"),
+c("GO:0120254","olefinic compound metabolic process",0.030973394811796714,5.692503962086787,0.9886407074277044,0.02213317,"olefinic compound metabolic process"),
+c("GO:0140014","mitotic nuclear division",0.0781486158830717,5.057991946977687,0.8070107095962067,0.00522646,"mitotic nuclear division"),
+c("GO:0007051","spindle organization",0.08131846610382368,1.5045149553290558,0.8242056098413358,0.67010158,"mitotic nuclear division"),
+c("GO:0048285","organelle fission",0.21729938606686847,4.2549252084179425,0.9128311715647041,0.48497457,"mitotic nuclear division"),
+c("GO:0051231","spindle elongation",0.0033727472443258015,2.4542864949087755,0.8266800487074023,0.68171697,"mitotic nuclear division"),
+c("GO:0051255","spindle midzone assembly",0.002597747137888019,2.4542864949087755,0.8345794083633069,0.51770255,"mitotic nuclear division"),
+c("GO:0098813","nuclear chromosome segregation",0.14021847419309516,4.33161408331,0.8305159892362465,0.66816019,"mitotic nuclear division"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/revigo_treemap.pdf", width=16, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```

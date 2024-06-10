@@ -1,0 +1,144 @@
+---
+title: "2024_2_13_Visualize_interesting_genes_HBV_HCV"
+output: html_document
+date: "2024-02-13"
+---
+
+**Purpose:** Visualize genes with opposite regulation in HBV and HCV
+
+**Methods:**
+
+* Read in expression, normalize towards TPM, visualize boxplots of tumor normal in HBV vs. HCV
+
+```{r, message=FALSE, warning=FALSE}
+library(DGEobj.utils)
+library(immunedeconv)
+library(pheatmap)
+library(ggplot2)
+```
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+## CTLA4
+```{r}
+tumorAdjacentExp <- as.matrix(tumorAdjacentExp)
+expression_voom <- convertCounts(tumorAdjacentExp, unit="TPM", geneLength = genes$length)
+
+metadata$virus_tumor <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+
+CTLA4 <- expression_tpm[which(genes$gene_name=="CTLA4"),]
+CTLA4 <- as.data.frame(cbind(CTLA4, metadata$virus_tumor))
+ggplot(CTLA4, aes(x=V2, y=as.numeric(CTLA4))) + geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()
+
+HBV_tumor <- CTLA4[which(metadata$Virus_infection=="HBV" & metadata$tumor=="1"),]
+HBV_adj <- CTLA4[which(metadata$Virus_infection=="HBV" & metadata$tumor=="0"),]
+HCV_tumor <- CTLA4[which(metadata$Virus_infection=="HCV" & metadata$tumor=="1"),]
+HCV_adj <- CTLA4[which(metadata$Virus_infection=="HCV" & metadata$tumor=="0"),]
+
+t.test(as.numeric(HBV_tumor$CTLA4), as.numeric(HBV_adj$CTLA4))
+t.test(as.numeric(HCV_tumor$CTLA4), as.numeric(HCV_adj$CTLA4))
+```
+
+## CTLA4
+```{r}
+CTLA4 <- expression_tpm[which(genes$gene_name=="TGFB1"),]
+CTLA4 <- as.data.frame(cbind(CTLA4, metadata$virus_tumor))
+ggplot(CTLA4, aes(x=V2, y=as.numeric(CTLA4))) + geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()
+
+HBV_tumor <- CTLA4[which(metadata$Virus_infection=="HBV" & metadata$tumor=="1"),]
+HBV_adj <- CTLA4[which(metadata$Virus_infection=="HBV" & metadata$tumor=="0"),]
+HCV_tumor <- CTLA4[which(metadata$Virus_infection=="HCV" & metadata$tumor=="1"),]
+HCV_adj <- CTLA4[which(metadata$Virus_infection=="HCV" & metadata$tumor=="0"),]
+
+t.test(as.numeric(HBV_tumor$CTLA4), as.numeric(HBV_adj$CTLA4))
+t.test(as.numeric(HCV_tumor$CTLA4), as.numeric(HCV_adj$CTLA4))
+```
+
+## MAPK7
+```{r}
+tumorAdjacentExp <- as.matrix(tumorAdjacentExp)
+expression_tpm <- convertCounts(tumorAdjacentExp, unit="TPM", geneLength = genes$length)
+
+metadata$virus_tumor <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+
+MAPK7 <- expression_tpm[which(genes$gene_name=="MAPK7"),]
+MAPK7 <- as.data.frame(cbind(MAPK7, metadata$virus_tumor))
+ggplot(MAPK7, aes(x=V2, y=as.numeric(MAPK7))) + geom_boxplot(outlier.shape = NA) + geom_jitter(width=0.05) + theme_minimal()
+
+HBV_tumor <- MAPK7[which(metadata$Virus_infection=="HBV" & metadata$tumor=="1"),]
+HBV_adj <- MAPK7[which(metadata$Virus_infection=="HBV" & metadata$tumor=="0"),]
+HCV_tumor <- MAPK7[which(metadata$Virus_infection=="HCV" & metadata$tumor=="1"),]
+HCV_adj <- MAPK7[which(metadata$Virus_infection=="HCV" & metadata$tumor=="0"),]
+
+t.test(as.numeric(HBV_tumor$MAPK7), as.numeric(HBV_adj$MAPK7))
+t.test(as.numeric(HCV_tumor$MAPK7), as.numeric(HCV_adj$MAPK7))
+```
+
+## Run Quantiseq
+```{r}
+row.names(expression_tpm) <- genes$gene_name
+res_quantiseq <- deconvolute(expression_tpm, "quantiseq", tumor=TRUE)
+```
+
+## Heatmap Quantiseq
+```{r}
+res_quantiseq_heatmap <- as.data.frame(res_quantiseq)
+row.names(res_quantiseq_heatmap) <- res_quantiseq_heatmap$cell_type
+res_quantiseq_heatmap <- res_quantiseq_heatmap[,-1]
+res_quantiseq_heatmap <- res_quantiseq_heatmap[-11,]
+
+identical(metadata$sampleid, colnames(res_quantiseq_heatmap))
+
+metadata$virus_tumor <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+annotation <- as.data.frame(metadata[,c(4,104)])
+row.names(annotation) <- colnames(res_quantiseq_heatmap)
+
+annotation <- annotation[order(annotation$virus_tumor),]
+res_quantiseq_heatmap <- res_quantiseq_heatmap[,match(row.names(annotation), colnames(res_quantiseq_heatmap))]
+identical(row.names(annotation), colnames(res_quantiseq_heatmap))
+
+pheatmap(res_quantiseq_heatmap, annotation_col=annotation, labels_col = NA, cluster_cols=F)
+```
+
+## Boxplots
+
+```{r}
+res_quantiseq_boxplots <- as.data.frame(t(res_quantiseq_heatmap))
+res_quantiseq_boxplots$viral_tissue <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+
+HBV_tumor <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="1"),]
+HBV_adjacent <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HBV" & metadata$tumor=="0"),]
+HCV_tumor <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="1"),]
+HCV_adjacent <- res_quantiseq_boxplots[which(metadata$Virus_infection=="HCV" & metadata$tumor=="0"),]
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=log(`Macrophage M1`+0.001))) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+
+ggplot(res_quantiseq_boxplots, aes(x=viral_tissue, y=log(`Macrophage M2`+0.001))) + geom_boxplot(outlier.shape = NULL)+ geom_jitter(width=0.05) + theme_minimal()
+
+wilcox.test(HBV_tumor$`Macrophage M1`, HBV_adjacent$`Macrophage M1`)
+
+boxplot(HBV_tumor$`T cell CD8+`, HBV_adjacent$`T cell CD8+`, HCV_tumor$`T cell CD8+`, HCV_adjacent$`T cell CD8+`)
+t.test(HBV_tumor$`T cell CD8+`, HBV_adjacent$`T cell CD8+`)
+t.test(HCV_tumor$`T cell CD8+`, HCV_adjacent$`T cell CD8+`)
+t.test(HCV_tumor$`T cell CD8+`, HBV_tumor$`T cell CD8+`)
+t.test(HCV_adjacent$`T cell CD8+`, HBV_adjacent$`T cell CD8+`)
+```
+

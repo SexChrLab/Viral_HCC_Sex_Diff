@@ -1,0 +1,183 @@
+---
+title: "2024_3_2_Check_genes_reversing_direction_Voom"
+output: html_document
+date: "2024-03-2"
+---
+
+**Purpose:**
+
+* Determine how often genes change direction between HBV and HCV comparisons before and after voom transformation
+
+**Methods:**
+
+* Raw expression values - averagea across each group (HBV tumor, HBV tumor-adjacent, HCV tumor, HCV tumor-adjacent), calcualte a logFC for each gene
+
+* Repeat the same process for voom expression values
+
+* Calculate how often the directionality changes (negative to positive or positive to negative fold change)
+
+**Results:**
+
+## Load libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(edgeR)
+library(DESeq2)
+library(limma)
+library(ggplot2)
+library(dplyr)
+```
+
+## Read in data
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+table(metadata$gender_tissue_viral)
+```
+
+## Relabeling genes
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp <- tumorAdjacentExp[rownames(tumorAdjacentExp) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp), genes$GENEID),]
+identical(rownames(tumorAdjacentExp), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+```
+
+## Create DEG list object
+```{r}
+dge <- DGEList(counts=tumorAdjacentExp, genes=genes)
+
+colnames(dge) <- colnames(tumorAdjacentExp)
+dge$samples$ID <- metadata$ID
+dge$samples$tumor <- factor(metadata$tumor)
+dge$samples$library_type <- metadata$libtype
+dge$samples$viral <- metadata$Virus_infection
+dge$samples$tissue_viral <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+dge$samples$gender_tussue <- metadata$gender_tissue
+dge$samples$gender_tissue_viral <- metadata$gender_tissue_viral
+```
+
+## Filtering by FPKM expression level
+```{r}
+# Keeping genes that have a mean FPKM of at least 0.5 in at least one of the
+# groups under investigation and at least 6 reads in at least 10 samples
+fpkm <- rpkm(dge, gene.length=dge$genes$length)
+
+M_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HBV")],1,mean,na.rm=TRUE)
+M_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HBV")],1,mean,na.rm=TRUE)
+M_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_1_HCV")],1,mean,na.rm=TRUE)
+M_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="M_0_HCV")],1,mean,na.rm=TRUE)
+
+F_1_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HBV")],1,mean,na.rm=TRUE)
+F_0_HBV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HBV")],1,mean,na.rm=TRUE)
+F_1_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_1_HCV")],1,mean,na.rm=TRUE)
+F_0_HCV_mean_fpkm <- apply(as.data.frame(fpkm)[(dge$samples$gender_tissue_viral=="F_0_HCV")],1,mean,na.rm=TRUE)
+
+keep <- (M_1_HBV_mean_fpkm > 0.5 | M_0_HBV_mean_fpkm > 0.5 | 
+           M_1_HCV_mean_fpkm > 0.5 | M_0_HCV_mean_fpkm > 0.5 |
+           F_1_HBV_mean_fpkm > 0.5 | F_0_HBV_mean_fpkm > 0.5 |
+           F_1_HCV_mean_fpkm > 0.5 | F_0_HCV_mean_fpkm > 0.5 )
+
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+keep <- rowSums(dge$counts > 6) >= 10
+dge <- dge[keep,,keep.lib.size=FALSE]
+dge <- calcNormFactors(dge, method="TMM")
+
+# N of genes retained after filtering
+dim(dge$genes)
+```
+
+## Create design matrix
+```{r}
+design <- model.matrix(~0+dge$samples$tissue_viral+dge$samples$library_type)
+colnames(design) <- gsub("dge\\$samples\\$tissue_viral", "", colnames(design))
+colnames(design) <- gsub("dge\\$samples\\$library_typeunstranded", "library_type", colnames(design))
+head(design)
+```
+
+## Voom analysis
+```{r}
+#v <- voomWithQualityWeights(dge, design, plot=TRUE)
+v <- voomWithQualityWeights(dge)#, design, plot=TRUE)
+```
+
+## Test expression pre- versus post- voom
+
+```{r}
+pre_voom <- as.data.frame(dge$counts)
+identical(colnames(pre_voom), metadata$sampleid)
+pre_voom_hbv_tumor <- pre_voom[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+pre_voom_hbv_adj <- pre_voom[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+pre_voom_hcv_tumor <- pre_voom[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+pre_voom_hcv_adj <- pre_voom[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+post_voom <- as.data.frame(v$E)
+identical(colnames(post_voom), metadata$sampleid)
+post_voom_hbv_tumor <- post_voom[,which(metadata$tumor==1 & metadata$Virus_infection=="HBV")]
+post_voom_hbv_adj <- post_voom[,which(metadata$tumor==0 & metadata$Virus_infection=="HBV")]
+post_voom_hcv_tumor <- post_voom[,which(metadata$tumor==1 & metadata$Virus_infection=="HCV")]
+post_voom_hcv_adj <- post_voom[,which(metadata$tumor==0 & metadata$Virus_infection=="HCV")]
+
+pre_voom_hbv_tumor <- as.data.frame(rowMeans(pre_voom_hbv_tumor))
+pre_voom_hbv_adj <- as.data.frame(rowMeans(pre_voom_hbv_adj))
+pre_voom_hcv_tumor <- as.data.frame(rowMeans(pre_voom_hcv_tumor))
+pre_voom_hcv_adj <- as.data.frame(rowMeans(pre_voom_hcv_adj))
+
+post_voom_hbv_tumor <- as.data.frame(rowMeans(post_voom_hbv_tumor))
+post_voom_hbv_adj <- as.data.frame(rowMeans(post_voom_hbv_adj))
+post_voom_hcv_tumor <- as.data.frame(rowMeans(post_voom_hcv_tumor))
+post_voom_hcv_adj <- as.data.frame(rowMeans(post_voom_hcv_adj))
+
+pre_voom_lfc_hbv <- as.data.frame(log(pre_voom_hbv_tumor$`rowMeans(pre_voom_hbv_tumor)` - pre_voom_hbv_adj$`rowMeans(pre_voom_hbv_adj)`,2))
+post_voom_lfc_hbv <- as.data.frame(log(post_voom_hbv_tumor$`rowMeans(post_voom_hbv_tumor)` - post_voom_hbv_adj$`rowMeans(post_voom_hbv_adj)`,2))
+
+plot(log(pre_voom_hbv_tumor$`rowMeans(pre_voom_hbv_tumor)`,2), log(pre_voom_hbv_adj$`rowMeans(pre_voom_hbv_adj)`,2), ylab="log 2 Adjacent Expression", xlab="log 2 Tumor Expression", main="HBV genes")
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Voom_pre_voom_comparison/HBV_pre_voom_tumor_adj_exp.pdf")
+plot(log(pre_voom_hbv_tumor$`rowMeans(pre_voom_hbv_tumor)`,2), log(pre_voom_hbv_adj$`rowMeans(pre_voom_hbv_adj)`,2), ylab="log 2 Adjacent Expression", xlab="log 2 Tumor Expression", main="HBV genes")
+dev.off()
+
+plot(post_voom_hbv_tumor$`rowMeans(post_voom_hbv_tumor)`, post_voom_hbv_adj$`rowMeans(post_voom_hbv_adj)`, ylab= "Voom Adjacent Expression", xlab="Voom Tumor Expression", main="HBV genes")
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Voom_pre_voom_comparison/HBV_post_voom_tumor_adj_exp.pdf")
+plot(post_voom_hbv_tumor$`rowMeans(post_voom_hbv_tumor)`, post_voom_hbv_adj$`rowMeans(post_voom_hbv_adj)`, ylab= "Voom Adjacent Expression", xlab="Voom Tumor Expression", main="HBV genes")
+dev.off()
+
+plot(pre_voom_lfc_hbv$`log(pre_voom_hbv_tumor$\`rowMeans(pre_voom_hbv_tumor)\` - pre_voom_hbv_adj$\`rowMeans(pre_voom_hbv_adj)\`, 2)`, post_voom_lfc_hbv$`log(post_voom_hbv_tumor$\`rowMeans(post_voom_hbv_tumor)\` - post_voom_hbv_adj$\`rowMeans(post_voom_hbv_adj)\`, 2)`, ylab= "Post-voom log fold change", xlab="Pre-voom log fold change", main="HBV genes")
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Voom_pre_voom_comparison/HBV_lfc_pre_post_voom_comparison.pdf")
+plot(pre_voom_lfc_hbv$`log(pre_voom_hbv_tumor$\`rowMeans(pre_voom_hbv_tumor)\` - pre_voom_hbv_adj$\`rowMeans(pre_voom_hbv_adj)\`, 2)`, post_voom_lfc_hbv$`log(post_voom_hbv_tumor$\`rowMeans(post_voom_hbv_tumor)\` - post_voom_hbv_adj$\`rowMeans(post_voom_hbv_adj)\`, 2)`, ylab= "Post-voom log fold change", xlab="Pre-voom log fold change", main="HBV genes")
+dev.off()
+
+pre_voom_lfc_hcv <- as.data.frame(log(pre_voom_hcv_tumor$`rowMeans(pre_voom_hcv_tumor)` - pre_voom_hcv_adj$`rowMeans(pre_voom_hcv_adj)`,2))
+post_voom_lfc_hcv <- as.data.frame(log(post_voom_hcv_tumor$`rowMeans(post_voom_hcv_tumor)` - post_voom_hcv_adj$`rowMeans(post_voom_hcv_adj)`,2))
+
+plot(log(pre_voom_hcv_tumor$`rowMeans(pre_voom_hcv_tumor)`,2), log(pre_voom_hcv_adj$`rowMeans(pre_voom_hcv_adj)`,2), ylab="log 2 Adjacent Expression", xlab="log 2 Tumor Expression", main="HCV genes")
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Voom_pre_voom_comparison/HCV_pre_voom_tumor_adj_exp.pdf")
+plot(log(pre_voom_hcv_tumor$`rowMeans(pre_voom_hcv_tumor)`,2), log(pre_voom_hcv_adj$`rowMeans(pre_voom_hcv_adj)`,2), ylab="log 2 Adjacent Expression", xlab="log 2 Tumor Expression", main="HCV genes")
+dev.off()
+
+plot(post_voom_hcv_tumor$`rowMeans(post_voom_hcv_tumor)`, post_voom_hcv_adj$`rowMeans(post_voom_hcv_adj)`, ylab= "Voom Adjacent Expression", xlab="Voom Tumor Expression", main="HCV genes")
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Voom_pre_voom_comparison/HCV_post_voom_tumor_adj_exp.pdf")
+plot(post_voom_hcv_tumor$`rowMeans(post_voom_hcv_tumor)`, post_voom_hcv_adj$`rowMeans(post_voom_hcv_adj)`, ylab= "Voom Adjacent Expression", xlab="Voom Tumor Expression", main="HCV genes")
+dev.off()
+
+plot(pre_voom_lfc_hcv$`log(pre_voom_hcv_tumor$\`rowMeans(pre_voom_hcv_tumor)\` - pre_voom_hcv_adj$\`rowMeans(pre_voom_hcv_adj)\`, 2)`, post_voom_lfc_hcv$`log(post_voom_hcv_tumor$\`rowMeans(post_voom_hcv_tumor)\` - post_voom_hcv_adj$\`rowMeans(post_voom_hcv_adj)\`, 2)`, ylab= "Post-voom log fold change", xlab="Pre-voom log fold change", main="HCV genes")
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Voom_pre_voom_comparison/HCV_lfc_pre_post_voom_comparison.pdf")
+plot(pre_voom_lfc_hcv$`log(pre_voom_hcv_tumor$\`rowMeans(pre_voom_hcv_tumor)\` - pre_voom_hcv_adj$\`rowMeans(pre_voom_hcv_adj)\`, 2)`, post_voom_lfc_hcv$`log(post_voom_hcv_tumor$\`rowMeans(post_voom_hcv_tumor)\` - post_voom_hcv_adj$\`rowMeans(post_voom_hcv_adj)\`, 2)`, ylab= "Post-voom log fold change", xlab="Pre-voom log fold change", main="HCV genes")
+dev.off()
+```
+
+
+**Interpretation:**
+
+* Large discrepancies between voom and pre-voom DEA estimates
+
+* How to reconcile this with the data that we see
+
