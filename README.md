@@ -5,12 +5,35 @@ Last updated by: Elizabeth Borden
 Contact: knodele@arizona.edu
 
 # Contents
-==============================
 
 All visualization and downstream analyses for the manuscript entitled "Unique Immune Landscapes in HCV and HBV-mediated Hepatocellular Carcinoma" are included here in Rmarkdown format. 
 
-QC - quality control analyses performed on the samples before analyses, including verification of sex and tumor status
+**QC**
 
-DEA_Analyses - All iterations of differential expression analyses performed on the data
+* Analysis of sex and tumor status across all available samples
 
-Visualizations - All iterations of DEA and pathway analysis visualization peformed on the data
+* Removal of samples not matching their sex or tumor status of origin (methods detailed in manuscript supplementary materials)
+
+* Visualization and statistical analyses of potential covariates for differential expression analysis
+
+**DEA_Analyses**
+
+* Tumor vs. tumor-adjacent, subset by sex and etiology
+
+* Tumor vs. tumor-adjacent, down-sampling of male samples
+
+* HBV vs. HCV, subset by tumor and tumor-adjacent
+
+**Immune cell deconvolution**
+
+* All code for immune cell deconvolution analyses and visualization
+
+**Visualizations**
+
+* Volcano plots
+
+* Upset plots
+
+* LogFC plots
+
+* Pathway analyses/Treemaps
