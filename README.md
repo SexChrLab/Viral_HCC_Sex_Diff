@@ -8,6 +8,12 @@ Contact: knodele@arizona.edu
 
 All visualization and downstream analyses for the manuscript entitled "Unique Immune Landscapes in HCV and HBV-mediated Hepatocellular Carcinoma" are included here in Rmarkdown format. 
 
+**Processing**
+
+* Code and results for initial FASTQ QC analysis
+
+* Read mapping and read count quantification code
+
 **QC**
 
 * Analysis of sex and tumor status across all available samples
