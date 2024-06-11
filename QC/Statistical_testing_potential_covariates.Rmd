@@ -1,0 +1,697 @@
+---
+title: "Statistical testing potential covariates"
+author: "Annika Jorgensen"
+date: "2023-12-11"
+output: pdf_document
+---
+PURPOSE: This document is to conduct statistical testing to see if any variables in the metadata are significantly different between males and females. For variables deemed significant further investigation will be done via MDS analysis and survival analysis. These variables may be incorportated as covariates in our DEA. 
+
+METHODS: Using R functions, statistical testing will be done on variables found in the metadata. The following variables will be testing 
+
+-- Age
+-- Tumor Stage
+-- Nodes
+-- Metadata
+-- Edmondson Grade
+-- Tumor stage in mm
+-- Liver Fibrosis
+-- Alcohol Intake
+-- Smoking
+-- Prognosis
+-- Survival Month
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(ggplot2)
+```
+
+
+Here the full metadata is read in as a dataframe titled "metadata" and a curated metadata set is titled "metadatasmall"
+```{r  Reading in data}
+#reading in Full meta dataset
+metadata <- read.table("~/Desktop/ResearchProjects/LiverCancer/Metadata/Full_RIKEN_clinical_data.csv", row.names=1,header=TRUE, sep=",")
+```
+
+```{r}
+#reading in meta dataset
+metadataSmall <- read.csv("~/Desktop/ResearchProjects/LiverCancer/DEA_removed_samples/MedicalCovariateAnalysis/data/metadataSubset.csv", row.names=1)
+
+```
+
+
+Subsetting metadata such that analyses can be conducted. The curated metadata set only has the samples in the analysis that we want to analyze. However, the curated metadata doesn't contain the full metadata. So, the full metadata set was subsetted by matching the sample names in the curated dataset for only the samples that we want to study.
+```{r subsetting data}
+#subsetting full metadata for samples used in analysis
+metadataAnalysis <- metadata[rownames(metadata) %in% metadataSmall$ID,]
+
+#subsetting male samples 
+Male <- metadataAnalysis[which(metadataAnalysis$Gender== "M"),]
+
+#subsetting female samples 
+Female <- metadataAnalysis[which(metadataAnalysis$Gender== "F"),]
+```
+
+
+### **F and T test age of males and females**
+Age is a numerical variable so a two-sample t test will be used to identify if the variable is statistically significant. To figure out the type of t test we want to use an f test is employed to determine whether or not the variances between the two datasets are equal or not. A significance level of 0.05 is used.
+```{r Age difference data}
+#subsetting age of male samples
+MaleAge<- Male$Age
+
+#subsetting age of female samples
+FemaleAge<- Female$Age
+
+#f test alpha=0.05
+var.test(MaleAge, FemaleAge) #Fail to reject null no evidence variance different
+
+#variances equal
+```
+
+The p value is 0.1851 so therefore we fail to reject the null hypothesis. We will conduct a t test with equal variance.
+
+```{r t test age }
+#t test alpha=0.05
+t.test(MaleAge,FemaleAge,var.equal=TRUE) #Fail to reject null mean age of males and females not significantly different
+```
+
+The mean age of males is 65.61 years and the mean age of females is 68.47. The p value is 0.1218 so we fail to reject the null hypothesis.
+
+CONCLUSION: We are 95% confident that the mean age of male patients compared to female patients is not significantly different. This variable will not be further analyzed. 
+
+Here we are creating two side by side box and whisker plots showing the distribution of male and female ages
+```{r}
+Age <- data.frame(Gender = metadataAnalysis$Gender, Age = metadataAnalysis$Age)
+
+ggplot(Age, aes(x = Gender, y = Age, fill = Gender)) +
+  geom_boxplot(position = position_dodge(width = 0.75)) +
+  labs(title = "Distribution of Age",
+       x = "Sex",
+       y = "Age") +
+  theme_minimal()
+```
+showing boxplot statistics for male age
+```{r}
+#getting boxplot statistics for male age
+boxplot.stats(MaleAge)
+```
+
+Showing boxplot statistics for female age distribution
+```{r}
+boxplot.stats(FemaleAge)
+```
+
+```{r}
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Age_box_plot.pdf")
+Age <- data.frame(Gender = metadataAnalysis$Gender, Age = metadataAnalysis$Age)
+
+ggplot(Age, aes(x = Gender, y = Age, fill = Gender)) +
+  geom_boxplot(position = position_dodge(width = 0.75)) +
+  labs(title = "Distribution of Age",
+       x = "Sex",
+       y = "Age") +
+  theme_minimal()
+dev.off()
+```
+## **Tumor Stage CHI-square**
+Since Tumor Stage is a categorical variable a CHI square homogenity of proportions test was conducted using the chisq.test function. A significance level of 0.05 is used
+```{r counts}
+#male stage separated by severity 
+Male1st<- nrow(Male[Male$Ta== "1", ])
+Male2st<- nrow(Male[Male$Ta== "2", ])
+Male3st<- nrow(Male[Male$Ta== "3", ])
+Male4st<- nrow(Male[Male$Ta== "4", ])
+
+#female stage separated by severity
+Female1st<- nrow(Female[Female$Ta== "1", ])
+Female2st<- nrow(Female[Female$Ta== "2", ])
+Female3st<- nrow(Female[Female$Ta== "3", ])
+Female4st<- nrow(Female[Female$Ta== "4", ])
+
+#counts of tumor stage
+TumorStage<- data.frame(Males= c(Male1st,Male2st,Male3st,Male4st), Females= c(Female1st, Female2st, Female3st,Female4st))
+rownames(TumorStage)<- c(1,2,3,4)
+
+#conducting chi square alpha 0.05
+chisq.test(TumorStage)
+
+#using different integrator because of warning
+chisq.test(TumorStage, simulate.p.value = TRUE, B = 10000)
+```
+CONCLUSION: We are 95 percent confident that the proportion of males and females at each Tumor Stage is the same. This variable does not need further analysis.
+
+Here is the table of counts for the patients at each Tumor stage. The row names are the stage.
+```{r tumor stage counts}
+
+#sums of rows in TumorStage
+TumorStageCounts<-c(27,72,42,9)
+
+#add sums of rows to TumorSTage
+TumorStage<- cbind(TumorStage,TumorStageCounts)
+
+#sums of columns in TumorStage
+StageTotalCounts<-c(108,42,150)
+
+#add sums of column to TumorStage
+TumorStage<- rbind(TumorStage,StageTotalCounts)
+rownames(TumorStage)<- c("1","2","3","4","Totals")
+```
+```{r stage output}
+TumorStage
+```
+Here is a paired percentage bar graph showing the percent of male and females samples in each tumor stage.
+```{r}
+
+# Sample data with sex, stage, and counts
+data <- data.frame(
+  Sex = rep(c("Males", "Females"), each = 4),
+  Category = rep(c("Stage 1", "Stage 2", "Stage 3", "Stage 4"), times = 2),
+  Percentage = c(17, 48, 36, 7, 10, 24, 6, 2)
+)
+
+#colors for graph
+custom_colors <- c("#40B0A6", "#FFC20A")
+
+# Calculate the percentages within each group
+data <- transform(data, Percentage = Percentage / tapply(Percentage, Sex, sum)[Sex] * 100)
+
+# Create a percentage paired bar graph
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Tumor_stage_bar_plot.pdf")
+ggplot(data, aes(x = Category, y = Percentage, fill = Sex, group = Sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage Bar Graph Tumor Stage",
+       x = "Tumor Stage",
+       y = "Percentage") +geom_text(aes(label = sprintf("%.1f%%", Percentage)),
+            position = position_dodge(width = 0.9),    # Adjust the width as needed
+            vjust = -0.5, hjust = 0.5, size = 3) +  scale_fill_manual(values = custom_colors) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+dev.off()
+```
+## **Investigating nodes and metastasis**
+We wanted to see if there were any number of patients with cancer in the lymph nodes or metastasized cancer.
+```{r nodes and metastasis}
+#counting number of samples without cancer in nodes
+MaleNodes<- nrow(Male[Male$N=="1",])
+FemaleNodes<- nrow(Female[Female$N=="1",])
+print(MaleNodes)
+print(FemaleNodes)
+
+#counting number of samples without metastasis
+MaleMetastasis<- nrow(Male[Male$M=="1",])
+FemaleMetastasis<- nrow(Female[Female$M=="1",])
+print(MaleMetastasis)
+print(FemaleMetastasis)
+```
+CONCLUSION: There are no patients with metastastized cancer or cancer in their lymph nodes. This variable does not need further analysis.
+
+## **CHI square Edmondson Grade**
+Since Edmondson Grade is a categorical variable a CHI square homogenity of proportions test was conducted using the chisq.test function.
+
+```{r}
+na_count_male <- sum(is.na(Male$Edmondson.grade))
+na_count_female <- sum(is.na(Male$Edmondson.grade))
+```
+```{r edmondson grade}
+
+#replacing NAs with Fives
+#Male[is.na(Male)]
+#Female[is.na(Female)] 
+
+#male grade separated by severity 
+MaleEg0<- nrow(Male[Male$Edmondson.grade=="0", ])
+MaleEg1<- nrow(Male[Male$Edmondson.grade=="1", ])
+MaleEg1.5<- nrow(Male[Male$Edmondson.grade=="1~2", ])
+MaleEg2<- nrow(Male[Male$Edmondson.grade=="2", ])
+MaleEg2.5<- nrow(Male[Male$Edmondson.grade=="2~3", ])
+MaleEg3<- nrow(Male[Male$Edmondson.grade=="3", ])
+MaleEg4<- nrow(Male[Male$Edmondson.grade=="4", ])
+
+#female grade separated by severity 
+FemaleEg0<- nrow(Female[Female$Edmondson.grade=="0", ])
+FemaleEg1<- nrow(Female[Female$Edmondson.grade=="1", ])
+FemaleEg1.5<- nrow(Female[Female$Edmondson.grade=="1~2", ])
+FemaleEg2<- nrow(Female[Female$Edmondson.grade=="2", ])
+FemaleEg2.5<- nrow(Female[Female$Edmondson.grade=="2~3", ])
+FemaleEg3<- nrow(Female[Female$Edmondson.grade=="3", ])
+FemaleEg4<- nrow(Female[Female$Edmondson.grade=="4", ])
+
+#creating dataframe for edmondson grade
+EdmondsonGrade<- data.frame(Males= c(MaleEg0,MaleEg1,MaleEg1.5,MaleEg2,MaleEg2.5,MaleEg3,MaleEg4), Females= c(FemaleEg0,FemaleEg1, FemaleEg1.5, FemaleEg2,FemaleEg2.5,FemaleEg3,FemaleEg4))
+rownames(EdmondsonGrade)<- c(0,1,1.5,2,2.5,3,4)
+
+#chi square test alpha 0.05 
+chisq.test(EdmondsonGrade)
+
+#ran using different integrator because of warning
+chisq.test(EdmondsonGrade, simulate.p.value = TRUE, B = 10000)
+
+#cannot reject null
+```
+
+CONCLUSION: We are 95 percent confident that the proportion of males and females at each Edmondson Grade is the same. This variable does not need further analysis.
+
+Below is a paired bar plot of raw counts of male and female samples at each Edmondson Grade
+```{r tumor stage paired plot}
+EdmondsonHist <- t(EdmondsonGrade)
+EdmondsonHist <- as.matrix(EdmondsonHist)
+```
+```{r plotting paired plot}
+
+barplot(EdmondsonHist, beside = TRUE, ylim = c(0,70), col = c("#FFC20A", "#40B0A6"), names.arg = c(0,1,1.5,2,2.5,3,4),
+       legend.text = c("Males", "Females"), xlab = "Edmondson Grade", ylab = "Counts",
+       main = "Edmondson Grade Paired Bar Plot")
+dev.off()
+```
+Listed below is the table show the counts of males and females with each Edmondson grade The row names are the levels of Edmondson Grade
+```{r counts Edmondson grade}
+
+#sums of rows in EdmondsonGrade
+EdmondsonGradeCounts<-c(1,14,8,87,23,16,1)
+
+#add sums of rows to EdmondsonGrade
+EdmondsonGrade<- cbind(EdmondsonGrade,EdmondsonGradeCounts)
+
+#sums of columns in EdmondsonGrade
+GradeTotalCounts<-c(108,42,150)
+
+#add sums of column to EdmondsonGrade
+EdmondsonGrade<- rbind(EdmondsonGrade,GradeTotalCounts)
+rownames(EdmondsonGrade)<- c("0","1","1.5","2","2.5","3","4","Totals")
+```
+```{r grade output}
+EdmondsonGrade
+```
+
+Below is a percentage paired bar plot showing the percentage of male and female samples at each Edmondson Grade.
+```{r}
+FemaleEg5<- nrow(Male[Male$Edmondson.grade=="5", ])
+print(FemaleEg5)
+FemaleEg5<- nrow(Male[Male$Edmondson.grade=="5", ])
+print(FemaleEg5)
+# Sample data with sex grade and count data
+data <- data.frame(
+  Sex = rep(c("Males", "Females"), each = 7),
+  Category = rep(c("Grade 0", "Grade 1", "Grade 1.5", "Grade 2", "Grade 2.5", "Grade 3", "Grade 4"), times = 2),
+  Percentage = c(1, 11, 5, 64, 14, 12, 1, 0, 3, 3, 23, 9, 4, 0)
+)
+
+custom_colors <- c("#40B0A6", "#FFC20A")
+
+# Calculate the percentages within each group
+data <- transform(data, Percentage = Percentage / tapply(Percentage, Sex, sum)[Sex] * 100)
+
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Edmondson_grade_bar_plot.pdf")
+# Create a percentage paired bar graph
+ggplot(data, aes(x = Category, y = Percentage, fill = Sex, group = Sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage Bar Graph Edmondson Grade",
+       x = "Edmondson Grade",
+       y = "Percentage") +geom_text(aes(label = sprintf("%.1f%%", Percentage)),
+            position = position_dodge(width = 0.9),    # Adjust the width as needed
+            vjust = -0.5, hjust = 0.5, size = 3) +  scale_fill_manual(values = custom_colors) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+dev.off()
+```
+### **F and T test tumor size in mm**
+Tumor Size is a numerical variable so a two-sample t test will be used to identify if the variable is statistically significant. To figure out the type of t test we want to use an f test is used to determine whether or not the variances between the two datasets are equal or not. A significance level of 0.05 is used.
+```{r f test tumor size}
+#subsetting by tumor size in female samples 
+FemaleSize <- Female$Tumor.size..mm.
+
+#subsetting by tumor size in male samples
+MaleSize<- Male$Tumor.size..mm.
+
+#f test alpha=0.05
+var.test(MaleSize, FemaleSize) #reject null variances significantly different 
+
+#variances unequal
+```
+
+The p value is 9.361e-05 so therefore we reject the null hypothesis. So, we will conduct a t test with unequal variances.
+
+```{r t test tumor size}
+#t test tumor size alpha=0.05
+t.test(MaleSize,FemaleSize) #Do not reject null no evidence tumor size is different
+
+#no significant difference
+```
+The mean male tumor size is 41.314 and the mean female tumor size is 33.52. The p value is 0.128 so we fail to reject null hypothesis.
+
+CONCLUSION:We are 95% confident that the mean tumor size (in mm) is not significantly different between males and females. We will not conduct further analysis on this variable.
+
+Here two box and whisker plots are created side by side showing the male and female distribution of tumor size. 
+
+```{r}
+# Create side-by-side boxplots
+par(mfrow = c(1, 2))  # Set up a 1x2 layout for two plots
+
+# Boxplot for MaleAge
+boxplot(MaleSize, main = "Distribution of Male Tumor Size", ylab = "Size in mm", col = "#FFC20A")
+
+# Boxplot for FemaleAge
+boxplot(FemaleSize, main = "Distribution of Female Tumor Size", ylab = "Size in mm", col = "#40B0A6", ylim = c(0,300))
+
+# Reset the layout to default (1x1) after creating the plots
+par(mfrow = c(1, 1))
+```
+
+```{r}
+TumorSize <- data.frame(Gender = metadataAnalysis$Gender, TumorSize = metadataAnalysis$Tumor.size..mm.)
+
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Tumor_size_box_plot")
+ggplot(TumorSize, aes(x = Gender, y = TumorSize, fill = Gender)) +
+  geom_boxplot(position = position_dodge(width = 0.75)) +
+  labs(title = "Distribution of Tumor Size in mm",
+       x = "Sex",
+       y = "Millimeters") +
+  theme_minimal()
+dev.off()
+```
+
+## **Liver Fibrosis CHI-square**
+Since Liver Fibrosis is a categorical variable a CHI square homogenity of proportions test was conducted using the chisq.test function.
+```{r Liver Fibrosis}
+#male fibrosis separated by severity 
+Male0F<- nrow(Male[Male$Liver.fibrosisc== "0", ])
+Male1F<- nrow(Male[Male$Liver.fibrosisc== "1", ])
+Male2F<- nrow(Male[Male$Liver.fibrosisc== "2", ])
+Male3F<- nrow(Male[Male$Liver.fibrosisc== "3", ])
+Male4F<- nrow(Male[Male$Liver.fibrosisc== "4", ])
+
+#female fibrosis
+Female0F<- nrow(Female[Female$Liver.fibrosisc== "0", ])
+Female1F<- nrow(Female[Female$Liver.fibrosisc== "1", ])
+Female2F<- nrow(Female[Female$Liver.fibrosisc== "2", ])
+Female3F<- nrow(Female[Female$Liver.fibrosisc== "3", ])
+Female4F<- nrow(Female[Female$Liver.fibrosisc== "4", ])
+
+#counts of liver fibrosis
+
+LiverFibrosis<- data.frame(Males= c(Male0F,Male1F,Male2F,Male3F,Male4F), Females= c(Female0F, Female1F, Female2F,Female3F,Female4F))
+
+#chi square test alpha 0.05 
+chisq.test(LiverFibrosis)
+
+#using different integrator because of warning
+chisq.test(LiverFibrosis, simulate.p.value = TRUE, B = 10000)
+```
+CONCLUSION: We are 95 percent confident that the proportion of males and females with liver fibrosis is the same. This variable does not need further analysis.
+
+Listed below is the table show the counts of males and females with each level of liver fibrosis. The row names are the severity of liver fibrosis
+```{r total counts}
+#sums of rows in LiverFibrosis
+LiverFibrosisCounts<-c(5,16,30,40,59)
+
+#add sums of rows to LiverFibrosis
+LiverFibrosis<- cbind(LiverFibrosis,LiverFibrosisCounts)
+
+#sums of columns in LiverFibrosis
+LiverTotalCounts<-c(108,42,150)
+
+#add sums of column to LiverFibrosis
+LiverFibrosis<- rbind(LiverFibrosis,LiverTotalCounts)
+rownames(LiverFibrosis)<- c("0","1","2","3","4","Totals")
+```
+
+```{r librosis counts}
+LiverFibrosis
+```
+Below is a percentage paired bar plot showing the percentage of male and female samples at each level of Liver Fibrosis.
+```{r}
+
+# Sample data with sex level of fibrosis and count data
+data <- data.frame(
+  Sex = rep(c("Males", "Females"), each = 5),
+  Category = rep(c("Severity 0", "Severity 1", "Severity 2", "Severity 3", "Severity 4"), times = 2),
+  Percentage = c(5, 13, 25, 26, 39, 0, 3, 5, 14, 20)
+)
+
+custom_colors <- c("#40B0A6", "#FFC20A") # colors denoting the sex
+
+# Calculate the percentages within each group
+data <- transform(data, Percentage = Percentage / tapply(Percentage, Sex, sum)[Sex] * 100)
+
+# Create a percentage paired bar graph
+
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Liver_fibrosis_bar_plot.pdf")
+ggplot(data, aes(x = Category, y = Percentage, fill = Sex, group = Sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage Bar Graph Liver Fibrosis",
+       x = "Severity",
+       y = "Percentage") +geom_text(aes(label = sprintf("%.1f%%", Percentage)),
+            position = position_dodge(width = 0.9),    # Adjust the width as needed
+            vjust = -0.5, hjust = 0.5, size = 3) +  scale_fill_manual(values = custom_colors) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+dev.off()
+```
+## **CHI-squared Alcohol**
+Since Alcohol Intake is a categorical variable a Chi square test will be conducted using chisq.test function.
+```{r Alcohol}
+#male alcohol intake separated by severity 
+Male0<- nrow(Male[Male$Alcohol.intakee== "0", ])
+Male1<- nrow(Male[Male$Alcohol.intakee== "1", ])
+Male2<- nrow(Male[Male$Alcohol.intakee== "2", ])
+Male3<- nrow(Male[Male$Alcohol.intakee== "3", ])
+MaleAlcohol<- as.data.frame(cbind(Male0,Male1,Male2,Male3))
+
+#female alcohol
+Female0<- nrow(Female[Female$Alcohol.intakee== "0", ])
+Female1<- nrow(Female[Female$Alcohol.intakee== "1", ])
+Female2<- nrow(Female[Female$Alcohol.intakee== "2", ])
+Female3<- nrow(Female[Female$Alcohol.intakee== "3", ])
+FemaleAlcohol<- as.data.frame(cbind(Female0,Female1,Female2,Female3))
+
+#counts of alcohol intake
+
+AlcoholIntake<- as.data.frame(cbind(Males= c(Male0,Male1,Male2,Male3), Females= c(Female0, Female1, Female2,Female3)))
+rownames(AlcoholIntake)<- c(0,1,2,3)
+
+#chi square test alpha of 0.05
+chisq.test(AlcoholIntake)
+# reject null hypothesis
+```
+
+CONCLUSION: We are 95% confident that the proportion of males and females who intake alcohol is different. This variable needs further analysis.
+
+Here is a paired barplot showing the raw counts of males and females at each level of alcohol intake.  
+```{r data transform Alcohol Intake}
+
+#transposing data for paired bar plot
+AlcoholIntake <- t(AlcoholIntake)
+AlcoholIntake <- as.matrix(AlcoholIntake)
+```
+```{r Alcohol Intake Paired Bar plot}
+#paired bar plot
+barplot(AlcoholIntake, beside = TRUE, ylim = c(0,40), col = c("#FFC20A", "#40B0A6"), names.arg = c(0,1,2,3),
+       legend.text = c("Males", "Females"), xlab = "Level of Severity", ylab = "Counts",
+       main = "Alcohol Intake Paired Bar Plot")
+```
+```{r data transformation Alcohol Intake}
+#transposing data
+AlcoholIntake <- as.data.frame(AlcoholIntake)
+AlcoholIntake <- t(AlcoholIntake)
+```
+
+Here is a sample table for males and female patients alcohol intake. The level of severity is the row name.
+```{r total columns alcohol}
+#sums of rows in Alcoholintake
+AlcoholTotalCounts<-c(63,25,42,20)
+
+#add sums of rows to AlcoholIntake
+AlcoholIntake<- cbind(AlcoholIntake,AlcoholTotalCounts)
+
+#sums of columns in AlcoholIntake
+AlcoholTotalCounts<-c(108,42,150)
+
+#add sums of column to AlcoholIntake
+AlcoholIntake<- rbind(AlcoholIntake,AlcoholTotalCounts)
+rownames(AlcoholIntake)<- c("0","1","2","3","Totals")
+```
+
+```{r output alcohol intake}
+AlcoholIntake
+```
+Below is a percentage paired bar plot showing the percentage of male and female sample at each level of alcohol intake.
+```{r}
+
+# Sample data sex level of alcohol intake and sample count
+data <- data.frame(
+  Sex = rep(c("Males", "Females"), each = 4),
+  Category = rep(c("Level 0", "Level 1", "Level 2", "Level 3"), times = 2),
+  Percentage = c(31, 20, 37, 20, 32, 5, 5, 0)
+)
+
+custom_colors <- c("#40B0A6", "#FFC20A")
+
+# Calculate the percentages within each group
+data <- transform(data, Percentage = Percentage / tapply(Percentage, Sex, sum)[Sex] * 100)
+
+# Create a percentage paired bar graph
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Alcohol_Intake_bar_plot.pdf")
+ggplot(data, aes(x = Category, y = Percentage, fill = Sex, group = Sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage Bar Graph Alcohol Intake",
+       x = "Level of Intake",
+       y = "Percentage") +geom_text(aes(label = sprintf("%.1f%%", Percentage)),
+            position = position_dodge(width = 0.9),    # Adjust the width as needed
+            vjust = -0.5, hjust = 0.5, size = 3) +  scale_fill_manual(values = custom_colors) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+dev.off()
+```
+### **Test of Proportions Smoking Males and Females** 
+Smoking is a dichotomous variable so we will conduct a test of proportions
+```{r smoking z test}
+#number of male smokers
+MaleSmokers<-sum(Male$Smoking)
+MaleSmokers
+
+
+#number of female smokers
+FemaleSmokers<- sum(Female$Smoking)
+FemaleSmokers
+
+```
+
+```{r two sample z test}
+# alpha=0.05
+prop.test(x=c(MaleSmokers,FemaleSmokers), n= c(108,42), p = NULL, alternative = "two.sided", correct = TRUE) #reject null hypothesis that there is no difference between the number of men and women that smoke
+
+#the number of men and women that smoke is significantly different
+```
+
+CONCLUSION: We are 95% confident that the proportion of males and females who smoke are different. Since 77% of males smoke and 9% of females smoke it is clear that more males that females smoke.
+
+Here a paired bar plot showing the percentages of males and females who do and do not smoke is created.
+```{r percentage bar plot smoking}
+#creating data frame with sex, smoking, and sample counts
+data <- data.frame(
+  Sex = rep(c("Males", "Females"), each = 2),
+  Category = rep(c("Does Smoke", "Does Not Smoke"), times = 2),
+  Percentage = c(83,25,4,38))
+
+custom_colors <- c("#40B0A6", "#FFC20A")
+
+# Calculate the percentages within each group
+data <- transform(data, Percentage = Percentage / tapply(Percentage, Sex, sum)[Sex] * 100)
+
+# Create a percentage paired bar graph
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Smoking_bar_plot.pdf")
+ggplot(data, aes(x = Category, y = Percentage, fill = Sex, group = Sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage Bar Graph Smoking",
+       x = "Smoking",
+       y = "Percentage") +geom_text(aes(label = sprintf("%.1f%%", Percentage)),
+            position = position_dodge(width = 0.9),    # Adjust the width as needed
+            vjust = -0.5, hjust = 0.5, size = 3) +  scale_fill_manual(values = custom_colors) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+dev.off()
+```
+## **CHI square Prognosis**
+Sincle prognosis is a categorical variable a chi square homogenity of proportions will be conducted.
+```{r Prognosis}
+
+#male prognosis separated by severity?
+MaleProg0<- nrow(Male[Male$Prognosisf=="0",])
+MaleProg1<- nrow(Male[Male$Prognosisf=="1",])
+MaleProg2<- nrow(Male[Male$Prognosisf=="2",])
+MaleProg3<- nrow(Male[Male$Prognosisf=="3",])
+
+#female prognosis separated by severity?
+FemaleProg0<- nrow(Female[Female$Prognosisf=="0",])
+FemaleProg1<- nrow(Female[Female$Prognosisf=="1",])
+FemaleProg2<- nrow(Female[Female$Prognosisf=="2",])
+FemaleProg3<- nrow(Female[Female$Prognosisf=="3",])
+
+#counts of Prognosis
+Prognosis<- as.data.frame(cbind(Males= c(MaleProg0,MaleProg1,MaleProg2,MaleProg3), Females= c(FemaleProg0, FemaleProg1,FemaleProg2,FemaleProg3)))
+
+chisq.test(Prognosis)
+
+#using different integrator because of warning
+chisq.test(Prognosis, simulate.p.value = TRUE, B = 10000)
+```
+
+CONCLUSION: We are 95% confident that the proportion of males and females at each level of prognosis is the same
+
+Here is a sample table with number of patients at each level of prognosis. The level of severity is the row name.
+```{r prognosis sample table}
+#sums of rows in Prognosis
+PrognosisCounts<-c(124,21,3,2)
+
+#add sums of rows to Prognosis
+Prognosis<- cbind(Prognosis,PrognosisCounts)
+
+#sums of columns in Prognosis
+PrognosisTotalCounts<-c(108,42,150)
+
+#add sums of column to Prognosis
+Prognosis<- rbind(Prognosis,PrognosisTotalCounts)
+rownames(Prognosis)<- c("0","1","2","3","Totals")
+```
+
+```{r prognosis output}
+Prognosis
+```
+
+Here a paired bar plot with is created showing the percentage of male and female samples and each level of prognosis
+```{r percentage graph}
+
+# Sample data with sex level of prognosis and sample count
+data <- data.frame(
+  Sex = rep(c("Males", "Females"), each = 4),
+  Category = rep(c("Level 0", "Level 1", "Level 2", "Level 3"), times = 2),
+  Percentage = c(92, 13, 2, 1, 32, 8, 1, 1)
+)
+
+custom_colors <- c("#40B0A6", "#FFC20A")
+
+# Calculate the percentages within each group
+data <- transform(data, Percentage = Percentage / tapply(Percentage, Sex, sum)[Sex] * 100)
+
+# Create a percentage paired bar graph
+pdf("~/Desktop/ResearchProjects/SexChromosomeGithubUpload/Statistical_testing_potential_covariates/figures/Prognosis_bar_plot.pdf")
+ggplot(data, aes(x = Category, y = Percentage, fill = Sex, group = Sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Percentage Bar Graph Prognosis",
+       x = "Level of Severity",
+       y = "Percentage") +geom_text(aes(label = sprintf("%.1f%%", Percentage)),
+            position = position_dodge(width = 0.9),    # Adjust the width as needed
+            vjust = -0.5, hjust = 0.5, size = 3) +  scale_fill_manual(values = custom_colors) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal()
+dev.off()
+```
+
+### **F and T test overall survival month**
+Since survival month is a numerical variable a two sample t test will be conducted. To see what type of t test shall be used a f test is conducted first
+```{r f test overall survival month}
+#subsetting overall survival month from male sample
+MaleSurvivalMonth<- Male$Overall.survival..month.
+
+#subsetting overall survival month from female sample
+FemaleSurvivalMonth<- Female$Overall.survival..month.
+
+#f test overall survival month alpha=0.05
+var.test(MaleSurvivalMonth, FemaleSurvivalMonth) #fail to reject null no evidence variances are different
+
+#variances are equal
+```
+
+The p value is 0.3362 so we fail to reject the null hypothesis. A two sample t test of equal variance will be conducted.
+
+```{r t test overall survival month}
+#t test overall survival month alpha=0.05
+t.test(MaleSurvivalMonth, FemaleSurvivalMonth, var.equal = TRUE) #Reject null survival month significantly different
+
+#significant difference
+```
+The mean overall survival month of males is 29.2 months and the mean overall survival month of females is 23.9 months. Note that the survival month for females is shorter than males which is atypical. 
+
+CONCLUSION: We are 95% confident that the mean survival month of males is different that the mean survival month of females. 
