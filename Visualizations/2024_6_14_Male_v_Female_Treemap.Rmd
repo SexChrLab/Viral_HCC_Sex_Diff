@@ -1,0 +1,72 @@
+---
+title: "2024_6_14_Male_v_Female_Treemap"
+output: html_document
+date: "2024-06-14"
+---
+
+```{r}
+# A treemap R script produced by the Revigo server at http://revigo.irb.hr/
+# If you found Revigo useful in your work, please cite the following reference:
+# Supek F et al. "REVIGO summarizes and visualizes long lists of Gene Ontology
+# terms" PLoS ONE 2011. doi:10.1371/journal.pone.0021800
+
+# author: Anton Kratz <anton.kratz@gmail.com>, RIKEN Omics Science Center, Functional Genomics Technology Team, Japan
+# created: Fri, Nov 02, 2012  7:25:52 PM
+# last change: Fri, Nov 09, 2012  3:20:01 PM
+
+# -----------------------------------------------------------------------------
+# If you don't have the treemap package installed, uncomment the following line:
+# install.packages( "treemap" );
+library(treemap) 								# treemap package by Martijn Tennekes
+
+# Set the working directory if necessary
+# setwd("C:/Users/username/workingdir");
+
+# --------------------------------------------------------------------------
+# Here is your data from Revigo. Scroll down for plot configuration options.
+
+revigo.names <- c("term_ID","description","frequency","value","uniqueness","dispensability","representative");
+revigo.data <- rbind(c("GO:0006805","xenobiotic metabolic process",0.14809884239041543,2.485945923540798,0.8016269526266007,0.06294942,"xenobiotic metabolic process"),
+c("GO:0009410","response to xenobiotic stimulus",0.16588440743259156,2.251584338268749,0.929878261408734,0.44563389,"xenobiotic metabolic process"),
+c("GO:0016101","diterpenoid metabolic process",0.11783183314458352,2.7241595203239246,0.6504472183659193,0.04598734,"diterpenoid metabolic process"),
+c("GO:0006720","isoprenoid metabolic process",0.7268691283111196,1.7146081144332483,0.7114121495882175,0.48322406,"diterpenoid metabolic process"),
+c("GO:0008202","steroid metabolic process",0.582585703698599,1.478788759535116,0.7414870760524114,0.50836482,"diterpenoid metabolic process"),
+c("GO:0042445","hormone metabolic process",0.380565740683504,2.385019411645873,0.7422682448481142,0.05197726,"hormone metabolic process"),
+c("GO:0001508","action potential",0.07191372384084996,1.5270443180992068,0.8325634768123463,0.5110491,"hormone metabolic process"),
+c("GO:0062014","negative regulation of small molecule metabolic process",0.05231657477622378,1.478788759535116,0.9520178554753319,0.13859067,"hormone metabolic process"),
+c("GO:0044282","small molecule catabolic process",3.2393611708974914,2.7241595203239246,0.6109236854551247,0,"small molecule catabolic process"),
+c("GO:0006066","alcohol metabolic process",1.3878680756698891,2.7241595203239246,0.5521496523755473,0.40070787,"small molecule catabolic process"),
+c("GO:0006067","ethanol metabolic process",0.01728275804819001,2.7241595203239246,0.6470376049011294,0.58352669,"small molecule catabolic process"),
+c("GO:0006547","histidine metabolic process",0.3337751133607945,1.6330503809102541,0.6331476132571742,0.33817878,"small molecule catabolic process"),
+c("GO:0006766","vitamin metabolic process",1.256768546208505,1.5270443180992068,0.6620399644086129,0.39561459,"small molecule catabolic process"),
+c("GO:0046394","carboxylic acid biosynthetic process",4.380508755890852,1.760257666244554,0.5220187655725514,0.64860895,"small molecule catabolic process"),
+c("GO:0046395","carboxylic acid catabolic process",2.3129220312968766,2.7241595203239246,0.5397130566851285,0.58265787,"small molecule catabolic process"));
+
+stuff <- data.frame(revigo.data);
+names(stuff) <- revigo.names;
+
+stuff$value <- as.numeric( as.character(stuff$value) );
+stuff$frequency <- as.numeric( as.character(stuff$frequency) );
+stuff$uniqueness <- as.numeric( as.character(stuff$uniqueness) );
+stuff$dispensability <- as.numeric( as.character(stuff$dispensability) );
+
+# by default, outputs to a PDF file
+pdf( file="~/3.0 Hasting Research/Liver Cancer Analysis/Pathway_results/Male_v_Female/revigo_treemap.pdf", width=16, height=9 ) # width and height are in inches
+
+# check the tmPlot command documentation for all possible parameters - there are a lot more
+treemap(
+  stuff,
+  index = c("representative","description"),
+  vSize = "value",
+  type = "categorical",
+  vColor = "representative",
+  title = "Revigo TreeMap",
+  inflate.labels = FALSE,      # set this to TRUE for space-filling group labels - good for posters
+  lowerbound.cex.labels = 0,   # try to draw as many labels as possible (still, some small squares may not get a label)
+  bg.labels = "#CCCCCCAA",   # define background color of group labels
+								 # "#CCCCCC00" is fully transparent, "#CCCCCCAA" is semi-transparent grey, NA is opaque
+  position.legend = "none"
+)
+
+dev.off()
+```

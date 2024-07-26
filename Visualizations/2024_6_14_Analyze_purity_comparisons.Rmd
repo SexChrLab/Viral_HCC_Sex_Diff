@@ -1,0 +1,29 @@
+---
+title: "2024_6_14_Analyze_purity_comparisons"
+output: html_document
+date: "2024-06-14"
+---
+
+## Read in data
+
+```{r}
+library(ggplot2)
+metadata <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv"))
+metadata$sampleid <- gsub("-", ".", metadata$sampleid)
+expression <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1))
+purity <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Puree_output.out"))
+
+purity$Anonymized_sample_name <- colnames(expression)
+purity <- purity[match(metadata$sampleid, purity$Anonymized_sample_name),]
+identical(metadata$sampleid, purity$Anonymized_sample_name)
+
+metadata$purity <- purity$purity
+
+metadata$viral_tissue <- paste(metadata$Virus_infection, metadata$tumor, sep="_")
+
+ggplot(metadata, aes(x=viral_tissue, y=purity)) + geom_boxplot(outlier.shape=NA) + geom_jitter(width=0.05) + theme_minimal()
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/Puree_purities.pdf")
+ggplot(metadata, aes(x=viral_tissue, y=purity)) + geom_boxplot(outlier.shape=NA) + geom_jitter(width=0.05) + theme_minimal()
+dev.off()
+```

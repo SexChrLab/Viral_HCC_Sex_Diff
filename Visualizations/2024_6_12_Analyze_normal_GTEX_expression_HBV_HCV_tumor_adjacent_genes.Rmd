@@ -1,0 +1,613 @@
+---
+title: "2024_6_12_Analyze_normal_GTEX_expression_HBV_HCV_tumor_adjacent_genes"
+output: html_document
+date: "2024-06-12"
+---
+
+**Purpose:**
+
+To assess the expression of genes differentially expressed in HBV and HCV tumor-adjacent tissue in the normal GTEX liver samples
+
+```{r}
+library(ggplot2)
+library(DGEobj.utils)
+```
+
+## Read in data - ICGC
+
+```{r}
+metadata <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_metadata_QC_filtered.csv", row.names=1,header=TRUE, sep=",")
+tumorAdjacentExp <- read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/Japan_HCC_Salmon_Expression_QC_filtered.csv", row.names = 1, header=TRUE)
+colnames(tumorAdjacentExp) <- gsub("\\.", "-", colnames(tumorAdjacentExp))
+identical(metadata$sampleid, colnames(tumorAdjacentExp))
+
+metadata_subset <- metadata[which(metadata$tumor==0),]
+tumorAdjacentExp_subset <- tumorAdjacentExp[,which(colnames(tumorAdjacentExp) %in% metadata_subset$sampleid)]
+identical(colnames(tumorAdjacentExp_subset), metadata_subset$sampleid)
+```
+
+## Calculating TPM
+
+```{r}
+# Importing gene annotations
+genes <- read.table("~/3.0 Hasting Research/Liver Cancer Analysis/gencodeTranscripts.txt", header=TRUE, sep="\t")
+genes <- data.frame(genes)
+tumorAdjacentExp_subset <- tumorAdjacentExp_subset[rownames(tumorAdjacentExp_subset) %in% genes$GENEID ,]
+genes <- genes[match(rownames(tumorAdjacentExp_subset), genes$GENEID),]
+identical(rownames(tumorAdjacentExp_subset), genes$GENEID)
+# Calculating gene length, this is needed for calculating the FPKM values
+genes$length <- with(genes, end - start)
+tumorAdjacentExp_subset <- as.matrix(tumorAdjacentExp_subset)
+tumorAdjacentExp_subset <- convertCounts(tumorAdjacentExp_subset, "TPM", genes$length)
+#tumorAdjacentExp_subset <- as.data.frame(tumorAdjacentExp_subset)
+```
+
+## Read in data - GTEX
+
+```{r}
+#gtex_exp <- as.data.frame(read.table("~/3.0 Hasting Research/Liver Cancer Analysis/GTEX_data/GTEX_counts_tpm.gct", skip=2, row.names = 1, header=TRUE))
+#head(gtex_exp)
+gtex_metadata <- as.data.frame(read.table("~/3.0 Hasting Research/Liver Cancer Analysis/GTEX_data/Liver.tsv", header = TRUE))
+gtex_metadata$entity.sample_id <- gsub("-", ".", gtex_metadata$entity.sample_id)
+
+#gtex_exp_subset <- gtex_exp[,which(colnames(gtex_exp) %in% gtex_metadata$entity.sample_id)]
+#identical(colnames(gtex_exp_subset), gtex_metadata$entity.sample_id)
+#write.csv(gtex_exp_subset, "~/3.0 Hasting Research/Liver Cancer Analysis/GTEX_data/Liver_only_GTEX_counts_tpm.csv")
+
+gtex_exp_subset <- as.data.frame(read.csv("~/3.0 Hasting Research/Liver Cancer Analysis/GTEX_data/Liver_only_GTEX_counts_tpm.csv", row.names=1))
+identical(colnames(gtex_exp_subset), gtex_metadata$entity.sample_id)
+```
+
+## Compare HBV, HCV, and normal tissue expression - AC007423.1
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000271239.1"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000271239.1"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="AC007423.1 Expression (TPM)")
+```
+
+## Compare HBV, HCV, and normal tissue expression - IFI6
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000126709.14"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000126709.14"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IFI6 Expression (TPM)")
+
+genes_combined <- gene_gtex
+colnames(genes_combined) <- c("IFI6", "Sample")
+```
+
+## Compare HBV, HCV, and normal tissue expression - LINC01554
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000236882.7"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000236882.7"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="LINC01554 Expression (TPM)")
+```
+
+## Compare HBV, HCV, and normal tissue expression - IFI27
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000165949.12"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000165949.12"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IFI27 Expression (TPM)")
+
+genes_combined$IFI27 <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGHV1-67
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000253274.1"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000253274.1"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGHV1-67 Expression (TPM)")
+
+genes_combined$`IGHV1-67` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - KRT17P8
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000256937.1"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000256937.1"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="KRT17P8 Expression (TPM)")
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGLV7-43
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000211652.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000211652.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGLV7-43 Expression (TPM)")
+
+genes_combined$`IGLV7-43` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGKV1-8
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000240671.4"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000240671.4"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGKV1-8 Expression (TPM)")
+
+genes_combined$`IGKV1-8` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGHV1-69
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000211973.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000211973.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGHV1-69 Expression (TPM)")
+
+genes_combined$`IGHV1-69` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGKV1D-8
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000239819.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000239819.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGKV1D-8 Expression (TPM)")
+
+genes_combined$`IGKV1D-8` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGKV6-21
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000211611.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000211611.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGKV6-21 Expression (TPM)")
+
+genes_combined$`IGKV6-21` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGHV1-24
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000211950.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000211950.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGHV1-24 Expression (TPM)")
+
+genes_combined$`IGHV1-24` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGHV3-69-1
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000282600.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000282600.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGHV3-69-1 Expression (TPM)")
+
+genes_combined$`IGHV3-69-1` <- gene_gtex$gene
+```
+
+
+## Compare HBV, HCV, and normal tissue expression - IGHV1-69D
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000280411.1"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000280411.1"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGHV1-69D Expression (TPM)")
+
+genes_combined$`IGHV1-69D` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGHV3-21
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000211947.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000211947.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGHV3-21 Expression (TPM)")
+
+genes_combined$`IGHV3-21` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGKV2D-40
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000251039.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000251039.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGKV2D-40 Expression (TPM)")
+
+genes_combined$`IGKV2D-40` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - FDCSP
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000181617.5"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000181617.5"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="FDCSP Expression (TPM)")
+
+genes_combined$`FDCSP` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGKV1-39
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000242371.1"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000242371.1"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGKV1-39 Expression (TPM)")
+
+genes_combined$`IGKV1-39` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGKV2D-28
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000242534.2"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000242534.2"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGKV2D-28 Expression (TPM)")
+
+genes_combined$`IGKV2D-28` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - PLA2G2A
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000188257.10"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000188257.11"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="PLA2G2A Expression (TPM)")
+
+genes_combined$`PLA2G2A` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - CSAG3
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000268916.6"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000268916.6"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="CSAG3 Expression (TPM)")
+
+genes_combined$`CSAG3` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - GSTM1
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000134184.12"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000134184.12"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="GSTM1 Expression (TPM)")
+```
+
+## Compare HBV, HCV, and normal tissue expression - IGKV3D-15
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000224041.3"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000224041.3"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="IGKV3D-15 Expression (TPM)")
+
+genes_combined$`IGKV3D-15` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - KRT23
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000108244.16"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000108244.16"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="KRT23 Expression (TPM)")
+
+genes_combined$`KRT23` <- gene_gtex$gene
+```
+
+## Compare HBV, HCV, and normal tissue expression - MYH4
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000264424.1"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000264424.1"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="MYH4 Expression (TPM)")
+
+genes_combined$`MYH4` <- gene_gtex$gene
+```
+
+## Violin plot
+
+```{r}
+genes_combined <- reshape::melt(genes_combined)
+
+ggplot(genes_combined, aes(x=reorder(variable, value), y=log(value+0.1,10))) + geom_violin() + theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + geom_hline(yintercept=0.7, linetype="dashed", color="red") + labs(x=NULL, y="Gene Expression log(TPM)")
+
+pdf("~/3.0 Hasting Research/Liver Cancer Analysis/GTEX_data/Figures/Volcano_plot_gene_expression.pdf")
+ggplot(genes_combined, aes(x=reorder(variable, value), y=log(value+0.1,10))) + geom_violin() + theme_minimal() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + geom_hline(yintercept=0.7, linetype="dashed", color="red") + labs(x=NULL, y="Gene Expression log(TPM)")
+dev.off()
+```
+
+# Just out of curiosity
+## Compare HBV, HCV, and normal tissue expression - OAS1
+
+```{r}
+gene_gtex <- gtex_exp_subset[which(row.names(gtex_exp_subset) %in% "ENSG00000089127.12"),]
+
+gene_icgc <- as.data.frame(tumorAdjacentExp_subset[which(row.names(tumorAdjacentExp_subset) %in% "ENSG00000089127.12"),])
+identical(row.names(gene_icgc), metadata_subset$sampleid)
+gene_icgc$sample <- metadata_subset$Virus_infection
+colnames(gene_icgc) <- c("gene", "sample")
+
+gene_gtex <- as.data.frame(t(gene_gtex))
+gene_gtex$sample <- "Normal"
+colnames(gene_gtex) <- c("gene", "sample")
+
+gene_overall <- rbind(gene_gtex, gene_icgc)
+
+ggplot(gene_overall, aes(x=factor(sample, levels=c("Normal", "HBV", "HCV")), y=log(gene+0.1))) + geom_boxplot(outlier.shape=NULL) + geom_jitter(width=0.05) + theme_minimal() + labs(x=NULL, y="OAS1 Expression (TPM)")
+```
+
+
+
